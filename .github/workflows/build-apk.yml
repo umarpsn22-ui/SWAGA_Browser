@@ -28,6 +28,8 @@ jobs:
           test -f "$ARCHIVE"
           mkdir -p android-project
           unzip -o -q "$ARCHIVE" -d android-project
+          mkdir -p android-project/app/src/main/java/app/swaga/browser/ui
+          cp patches/GhostModeOverlay.kt android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
           find android-project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
 
       - name: Set up Java
