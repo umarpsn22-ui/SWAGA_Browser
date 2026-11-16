@@ -55,8 +55,7 @@ jobs:
           PROJECT_DIR="$(dirname "$(find android-project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)")"
           test -n "$PROJECT_DIR"
           cd "$PROJECT_DIR"
-          chmod +x ./gradlew
-          ./gradlew --no-daemon assembleDebug
+          gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
