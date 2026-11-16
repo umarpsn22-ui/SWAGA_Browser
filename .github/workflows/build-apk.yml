@@ -29,6 +29,8 @@ jobs:
           test -f "$ARCHIVE"
           mkdir -p android-project
           unzip -o -q "$ARCHIVE" -d android-project
+          echo "Archive used: $ARCHIVE"
+          find android-project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
 
       - name: Apply browser UI and Ghost Mode changes
         run: |
@@ -38,9 +40,14 @@ jobs:
           cd android-project
           git apply --check /tmp/swaga-app-changes.patch
           git apply /tmp/swaga-app-changes.patch
-          test -f app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
-          grep -n "setGhostMode" app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -n "#SwagaBrowser" app/src/main/res/values/strings.xml
+          echo "Ghost overlay files:"
+          find . -type f -name GhostModeOverlay.kt -print
+          VM_FILE="$(find . -type f -name BrowserViewModel.kt -print -quit)"
+          STRINGS_FILE="$(find . -type f -path '*/res/values/strings.xml' -print -quit)"
+          test -n "$VM_FILE"
+          test -n "$STRINGS_FILE"
+          grep -n "setGhostMode" "$VM_FILE"
+          grep -n "#SwagaBrowser" "$STRINGS_FILE"
 
       - name: Set up Java
         uses: actions/setup-java@v4
