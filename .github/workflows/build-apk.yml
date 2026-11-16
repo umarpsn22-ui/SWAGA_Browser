@@ -284,7 +284,7 @@ jobs:
           root = Path("android-project/app")
           theme = root / "src/main/java/app/swaga/browser/themes/SwagaTheme.kt"
           source = theme.read_text(encoding="utf-8")
-          start = source.index("@Composable\\nfun Modifier.panel(")
+          panel_at = source.index("fun Modifier.panel(")\n          start = source.rfind("@Composable", 0, panel_at)
           replacement = """@Composable
           fun Modifier.panel(
               shape: Shape = RoundedCornerShape(16.dp),
