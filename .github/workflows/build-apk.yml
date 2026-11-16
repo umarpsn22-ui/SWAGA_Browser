@@ -28,26 +28,21 @@ jobs:
           mkdir -p android-project
           unzip -o -q "$ARCHIVE" -d android-project
           echo "Archive used: $ARCHIVE"
-          find android-project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
+          test -f android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
 
-      - name: Apply browser UI and Ghost Mode changes
+      - name: Apply real browser source changes
         run: |
           set -euxo pipefail
-          base64 -d patches/app-changes.patch.gz.b64 | gzip -dc > /tmp/swaga-app-changes.patch
-          test -s /tmp/swaga-app-changes.patch
-          echo "Patch summary:"
-          git apply --stat /tmp/swaga-app-changes.patch
-          cd android-project
-          git apply --check /tmp/swaga-app-changes.patch
-          git apply --verbose /tmp/swaga-app-changes.patch
-          echo "Changed files:"
-          git status --short || true
-          echo "Ghost overlay files:"
-          find . -type f -name GhostModeOverlay.kt -print
-          echo "Ghost mode references:"
-          grep -R -n "setGhostMode" app/src/main/java || true
-          echo "App name:"
-          grep -R -n "#SwagaBrowser" app/src/main/res || true
+          base64 -d patches/browser-update.patch.gz.b64 | gzip -dc > /tmp/swaga-browser-update.patch
+          test -s /tmp/swaga-browser-update.patch
+          git -C android-project apply --check /tmp/swaga-browser-update.patch
+          git -C android-project apply /tmp/swaga-browser-update.patch
+          grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
+          grep -q "GhostModeButton" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
+          grep -q "Куда отправимся?" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+          grep -q "#FFFFFF" android-project/app/src/main/res/drawable/ic_launcher_foreground.xml
+          echo "Verified Ghost Mode, transition, redesigned start page, and #SWAGA vector icon."
 
       - name: Set up Java
         uses: actions/setup-java@v4
