@@ -171,14 +171,7 @@ jobs:
 
           page = page[:hero_start] + hero + page[hero_end:]
 
-          action_anchor = '''            Text(
-                "\${vm.engine.name}  ·  изменить поисковик",
-                color = c.dim,
-                fontSize = 12.sp,
-                modifier = Modifier.clickable { onEngines() },
-            )
-'''
-          actions = action_anchor + '''
+          actions = '''
             Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 StartAction("＋ Новая вкладка", Modifier.weight(1f)) { vm.newTab() }
@@ -187,8 +180,9 @@ jobs:
                 }
             }
 '''
-          if action_anchor in page and "StartAction(" not in page:
-              page = page.replace(action_anchor, actions, 1)
+          if "StartAction(" not in page:
+              action_position = page.index("            if (vm.ghostModeEnabled) {")
+              page = page[:action_position] + actions + page[action_position:]
 
           section_anchor = '@Composable\nprivate fun SectionTitle(text: String) {'
           action_component = '''@Composable
