@@ -40,6 +40,11 @@ jobs:
           base64 -d patches/icons-hotfix.patch.gz.b64 | gzip -dc > /tmp/swaga-icons-hotfix.patch
           git apply --check --directory=android-project /tmp/swaga-icons-hotfix.patch
           git apply --directory=android-project /tmp/swaga-icons-hotfix.patch
+          base64 -d patches/property-hotfix.patch.gz.b64 | gzip -dc > /tmp/swaga-property-hotfix.patch
+          git apply --check --directory=android-project /tmp/swaga-property-hotfix.patch
+          git apply --directory=android-project /tmp/swaga-property-hotfix.patch
+          grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -q "isGhostMode" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
           grep -q "GhostModeButton" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
