@@ -116,6 +116,21 @@ jobs:
           grep -q "#FFFFFF" android-project/app/src/main/res/drawable/ic_launcher_foreground.xml
           echo "Verified Ghost Mode, transition, redesigned start page, and #SWAGA vector icon."
 
+      - name: Upload transformed source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwagaBrowser-source-snapshot
+          path: |
+            android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+            android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+            android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
+            android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
+            android-project/app/src/main/java/app/swaga/browser/ui/Sheets.kt
+            android-project/app/src/main/java/app/swaga/browser/themes/SwagaTheme.kt
+            android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
