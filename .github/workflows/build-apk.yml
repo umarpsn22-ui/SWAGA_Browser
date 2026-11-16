@@ -287,7 +287,7 @@ jobs:
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "GhostVoicePlayer.speak" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/GhostVoicePlayer.kt
+          grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "Свагаааа" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
           grep -q "ТВОЕ ОКНО В СВАГУ" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
           grep -q "StartAction" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
