@@ -62,6 +62,15 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           root = Path("android-project/app")
+          sheets = root / "src/main/java/app/swaga/browser/ui/Sheets.kt"
+          sheet_source = sheets.read_text(encoding="utf-8")
+          if "import androidx.compose.material3.TextButton" not in sheet_source:
+              sheet_source = sheet_source.replace(
+                  "import androidx.compose.material3.Text\\n",
+                  "import androidx.compose.material3.Text\\nimport androidx.compose.material3.TextButton\\n",
+                  1,
+              )
+          sheets.write_text(sheet_source, encoding="utf-8")
           gradle = root / "build.gradle.kts"
           source = gradle.read_text(encoding="utf-8")
           source = source.replace('versionName = "0.1.0"', 'versionName = "0.2.0"')
