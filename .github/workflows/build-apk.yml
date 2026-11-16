@@ -35,8 +35,8 @@ jobs:
           set -euxo pipefail
           base64 -d patches/browser-update.patch.gz.b64 | gzip -dc > /tmp/swaga-browser-update.patch
           test -s /tmp/swaga-browser-update.patch
-          git -C android-project apply --check /tmp/swaga-browser-update.patch
-          git -C android-project apply /tmp/swaga-browser-update.patch
+          git apply --check --directory=android-project /tmp/swaga-browser-update.patch
+          git apply --directory=android-project /tmp/swaga-browser-update.patch
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
           grep -q "GhostModeButton" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
