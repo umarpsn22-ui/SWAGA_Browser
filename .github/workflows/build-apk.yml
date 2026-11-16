@@ -59,6 +59,33 @@ jobs:
           test -s /tmp/swaga-full-browser-update.patch
           git apply --check --directory=android-project /tmp/swaga-full-browser-update.patch
           git apply --directory=android-project /tmp/swaga-full-browser-update.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path("android-project/app")
+          gradle = root / "build.gradle.kts"
+          source = gradle.read_text(encoding="utf-8")
+          source, count = re.subn(r'versionName\\s*=\\s*"[^"]+"', 'versionName = "0.2.0"', source, count=1)
+          if count != 1:
+              raise SystemExit("Cannot update versionName")
+          gradle.write_text(source, encoding="utf-8")
+          (root / "src/main/res/values/strings.xml").write_text(
+              '<resources>\\n    <string name="app_name">#SWAGA_Browser</string>\\n</resources>\\n',
+              encoding="utf-8",
+          )
+          for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
+              path = root / "src/main/res/mipmap-anydpi-v26" / name
+              source = path.read_text(encoding="utf-8")
+              source, count = re.subn(
+                  r'(android:foreground\\s+android:drawable=")[^"]+(")',
+                  r'\\1@drawable/swaga_logo_inset\\2',
+                  source,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit(f"Cannot resize launcher foreground in {name}")
+              path.write_text(source, encoding="utf-8")
+          PY
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var ghostMode " android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
