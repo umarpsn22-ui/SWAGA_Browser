@@ -32,14 +32,15 @@ jobs:
 
       - name: Apply browser UI and Ghost Mode changes
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           base64 -d patches/app-changes.patch.gz.b64 | gzip -dc > /tmp/swaga-app-changes.patch
+          test -s /tmp/swaga-app-changes.patch
           cd android-project
           git apply --check /tmp/swaga-app-changes.patch
           git apply /tmp/swaga-app-changes.patch
           test -f app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
-          grep -q "setGhostMode" app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -q "#SwagaBrowser" app/src/main/res/values/strings.xml
+          grep -n "setGhostMode" app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -n "#SwagaBrowser" app/src/main/res/values/strings.xml
 
       - name: Set up Java
         uses: actions/setup-java@v4
