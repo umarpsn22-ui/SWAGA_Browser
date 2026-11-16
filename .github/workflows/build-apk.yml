@@ -6,6 +6,7 @@ on:
     paths:
       - "swaga-src.zip"
       - "swaga-src-with-build-workflow.zip"
+      - "patches/**"
       - ".github/workflows/build-apk.yml"
 
 permissions:
@@ -28,9 +29,17 @@ jobs:
           test -f "$ARCHIVE"
           mkdir -p android-project
           unzip -o -q "$ARCHIVE" -d android-project
-          mkdir -p android-project/app/src/main/java/app/swaga/browser/ui
-          cp patches/GhostModeOverlay.kt android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
-          find android-project -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
+
+      - name: Apply browser UI and Ghost Mode changes
+        run: |
+          set -euo pipefail
+          base64 -d patches/app-changes.patch.gz.b64 | gzip -dc > /tmp/swaga-app-changes.patch
+          cd android-project
+          git apply --check /tmp/swaga-app-changes.patch
+          git apply /tmp/swaga-app-changes.patch
+          test -f app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
+          grep -q "setGhostMode" app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -q "#SwagaBrowser" app/src/main/res/values/strings.xml
 
       - name: Set up Java
         uses: actions/setup-java@v4
