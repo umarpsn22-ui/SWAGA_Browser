@@ -55,6 +55,10 @@ jobs:
               source = re.sub(r"\b(?:isGhostMode|ghostMode)\b", "ghostModeEnabled", source)
               path.write_text(source, encoding="utf-8")
           PY
+          base64 -d patches/full-browser-update.patch.gz.b64 | gzip -dc > /tmp/swaga-full-browser-update.patch
+          test -s /tmp/swaga-full-browser-update.patch
+          git apply --check --directory=android-project /tmp/swaga-full-browser-update.patch
+          git apply --directory=android-project /tmp/swaga-full-browser-update.patch
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var ghostMode " android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
@@ -62,11 +66,18 @@ jobs:
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
+          grep -q "GhostSoundPlayer.play" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          ! grep -R -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui
           grep -q "GhostModeButton" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "Icons.Filled.Lock" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           ! grep -q "VisibilityOff" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-          grep -q "Куда отправимся?" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+          grep -q "#SWAGAA" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+          grep -q "#SWAGA_Browser" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+          grep -q "BookmarksSheet" android-project/app/src/main/java/app/swaga/browser/ui/Sheets.kt
+          grep -q "findAllAsync" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
+          grep -q "setDownloadListener" android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
+          grep -q "desktopUserAgent" android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
+          grep -q "swaga_logo_inset" android-project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           grep -q "#FFFFFF" android-project/app/src/main/res/drawable/ic_launcher_foreground.xml
           echo "Verified Ghost Mode, transition, redesigned start page, and #SWAGA vector icon."
 
