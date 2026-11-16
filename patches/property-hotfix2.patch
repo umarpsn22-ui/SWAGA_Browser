@@ -1,0 +1,144 @@
+diff --git a/app/src/main/java/app/swaga/browser/BrowserViewModel.kt b/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+index 8f09694..dc66309 100644
+--- a/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
++++ b/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+@@ -40,7 +40,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
+         private set
+ 
+     /** True only for the current in-memory browsing session. Never persisted. */
+-    var isGhostMode by mutableStateOf(false)
++    var ghostModeEnabled by mutableStateOf(false)
+         private set
+     var ghostTransition by mutableIntStateOf(0)
+         private set
+@@ -107,7 +107,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
+     }
+ 
+     fun clearRecent() {
+-        if (isGhostMode) return
++        if (ghostModeEnabled) return
+         recentStore.clear()
+         recent.clear()
+     }
+@@ -118,13 +118,13 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
+      * Ghost Mode state and visited pages are deliberately never written to TabStore.
+      */
+     fun setGhostMode(enabled: Boolean) {
+-        if (isGhostMode == enabled) return
++        if (ghostModeEnabled == enabled) return
+         val tab = activeTab ?: newTab()
+ 
+         if (enabled) {
+             restoreUrlAfterGhost = tab.url
+             restoreTitleAfterGhost = tab.title
+-            isGhostMode = true
++            ghostModeEnabled = true
+             ghostTransitionEntering = true
+ 
+             // WebView's cookie switch is process-wide. The app has one live WebView at a time.
+@@ -139,7 +139,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
+             tab.savedState = null
+             message = "Режим призрака включён. История этого сеанса не сохранится."
+         } else {
+-            isGhostMode = false
++            ghostModeEnabled = false
+             ghostTransitionEntering = false
+             CookieManager.getInstance().setAcceptCookie(true)
+             tab.webView?.apply {
+@@ -161,7 +161,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
+         ghostTransition++
+     }
+ 
+-    fun toggleGhostMode() = setGhostMode(!isGhostMode)
++    fun toggleGhostMode() = setGhostMode(!ghostModeEnabled)
+ 
+     // ---- Вкладки ----
+ 
+@@ -169,7 +169,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app) {
+         Tab(nextId++, url, title).also { tab ->
+             tab.onPageLoaded = { loaded ->
+                 val u = loaded.url
+-                if (!isGhostMode && u != null) {
++                if (!ghostModeEnabled && u != null) {
+                     val next = recentStore.add(recent.toList(), loaded.title, u)
+                     recent.clear()
+                     recent.addAll(next)
+@@ -178,7 +178,7 @@ class BrowserViewModel(app: Application) : AndroidViewModel(app: swaga/browser/ui/BottomBar.kt b/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
+index c06b567..2a13661 100644
+--- a/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
++++ b/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
+@@ -88,9 +88,9 @@ fun BottomBar(
+             Spacer(Modifier.weight(1f))
+         }
+ 
+-        GhostModeButton(active = vm.isGhostMode, onClick = vm::toggleGhostMode)
++        GhostModeButton(active = vm.ghostModeEnabled, onClick = vm::toggleGhostMode)
+ 
+-        if (!vm.isGhostMode) {
++        if (!vm.ghostModeEnabled) {
+             IconButton(onClick = onTabs, modifier = Modifier.size(40.dp)) {
+                 TabsCountIcon(vm.tabs.size)
+             }
+@@ -101,14 +101,14 @@ fun BottomBar(
+                 Icon(Icons.Filled.MoreVert, contentDescription = "Меню")
+             }
+             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+-                if (!vm.isGhostMode) {
++                if (!vm.ghostModeEnabled) {
+                     DropdownMenuItem(
+                         text = { Text("Новая вкладка") },
+                         onClick = { menu = false; vm.newTab() },
+                     )
+                 }
+                 DropdownMenuItem(
+-                    text = { Text(if (vm.isGhostMode) "Выйти из режима призрака" else "Включить режим призрака") },
++                    text = { Text(if (vm.ghostModeEnabled) "Выйти из режима призрака" else "Включить режим призрака") },
+                     onClick = { menu = false; vm.toggleGhostMode() },
+                 )
+                 DropdownMenuItem(
+diff --git a/app/src/main/java/app/swaga/browser/ui/BrowserApp.kt b/app/src/main/java/app/swaga/browser/ui/BrowserApp.kt
+index 482a700..c8dc7ff 100644
+--- a/app/src/main/java/app/swaga/browser/ui/BrowserApp.kt
++++ b/app/src/main/java/app/swaga/browser/ui/BrowserApp.kt
+@@ -61,8 +61,8 @@ fun BrowserApp(vm: BrowserViewModel) {
+         }
+     }
+ 
+-    LaunchedEffect(vm.isGhostMode) {
+-        if (vm.isGhostMode) showSwitcher = false
++    LaunchedEffect(vm.ghostModeEnabled) {
++        if (vm.ghostModeEnabled) showSwitcher = false
+     }
+ 
+     LaunchedEffect(vm.message) {
+@@ -109,7 +109,7 @@ fun BrowserApp(vm: BrowserViewModel) {
+                 )
+             }
+ 
+-            if (showSwitcher && !vm.isGhostMode) {
++            if (showSwitcher && !vm.ghostModeEnabled) {
+                 TabSwitcher(vm = vm, onClose = { showSwitcher = false })
+             }
+ 
+diff --git a/app/src/main/java/app/swaga/browser/ui/StartPage.kt b/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+index ce55d41..e9f602e 100644
+--- a/app/src/main/java/app/swaga/browser/ui/StartPage.kt
++++ b/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+@@ -172,7 +172,7 @@ fun StartPage(
+                 modifier = Modifier.clickable { onEngines() },
+             )
+ 
+-            if (vm.isGhostMode) {
++            if (vm.ghostModeEnabled) {
+                 Spacer(Modifier.height(20.dp))
+                 Row(
+                     Modifier
+@@ -200,7 +200,7 @@ fun StartPage(
+                 Spacer(Modifier.height(10.dp))
+             }
+ 
+-            if (vm.recent.isNotEmpty() && !vm.isGhostMode) {
++            if (vm.recent.isNotEmpty() && !vm.ghostModeEnabled) {
+                 Spacer(Modifier.height(30.dp))
+                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                     Text("НЕДАВНО ОТКРЫТЫЕ", color = c.dim, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.1.sp, modifier = Modifier.weight(1f))
