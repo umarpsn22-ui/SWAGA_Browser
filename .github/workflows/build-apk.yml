@@ -92,6 +92,198 @@ jobs:
           inset = root / "src/main/res/drawable/swaga_logo_inset.xml"
           inset_source = inset.read_text(encoding="utf-8").replace("@drawable/swaga_logo", "@drawable/ic_launcher_foreground")
           inset.write_text(inset_source, encoding="utf-8")
+
+          start_page = root / "src/main/java/app/swaga/browser/ui/StartPage.kt"
+          page = start_page.read_text(encoding="utf-8")
+          page = page.replace('ТВОЁ ОКНО В ИНТЕРНЕТ', 'ТВОЕ ОКНО В СВАГУ🤤🤤🤤')
+          page = page.replace('ТВОЙ БРАУЗЕР. ТВОИ ПРАВИЛА.', 'Свагаааа🤤🤤🤤')
+
+          hero_start = page.index('@Composable\nprivate fun SwagaHero(')
+          hero_end = page.index('\n@Composable\nprivate fun SectionTitle', hero_start)
+          hero = '''@Composable
+          private fun SwagaHero(tiltX: Float, tiltY: Float) {
+              val c = LocalSwaga.current
+              val depth = Modifier.graphicsLayer {
+                  rotationX = tiltX
+                  rotationY = tiltY
+                  cameraDistance = 18f * density
+                  scaleX = 1f + kotlin.math.abs(tiltY) * 0.0015f
+                  scaleY = 1f + kotlin.math.abs(tiltX) * 0.0015f
+              }
+              val extrusion = listOf(
+                  Color(0xFF101827),
+                  Color(0xFF18243A),
+                  Color(0xFF24334D),
+                  Color(0xFF34445E),
+                  Color(0xFF64748B),
+              )
+              Box(
+                  Modifier.fillMaxWidth().height(136.dp),
+                  contentAlignment = Alignment.Center,
+              ) {
+                  Box(
+                      Modifier
+                          .size(width = 290.dp, height = 112.dp)
+                          .then(depth)
+                          .background(
+                              Brush.radialGradient(
+                                  listOf(c.accent.copy(alpha = 0.23f), Color.White.copy(alpha = 0.055f), Color.Transparent),
+                              ),
+                              CircleShape,
+                          ),
+                  )
+                  extrusion.forEachIndexed { index, shade ->
+                      Text(
+                          "#SWAGAA",
+                          modifier = Modifier.offset(y = ((extrusion.lastIndex - index + 1) * 2).dp).then(depth),
+                          color = shade,
+                          fontSize = 60.sp,
+                          fontWeight = FontWeight.Black,
+                          letterSpacing = (-3.6).sp,
+                      )
+                  }
+                  Text(
+                      "#SWAGAA",
+                      modifier = depth,
+                      color = Color.White,
+                      fontSize = 60.sp,
+                      fontWeight = FontWeight.Black,
+                      letterSpacing = (-3.6).sp,
+                      style = TextStyle(
+                          shadow = Shadow(Color.White.copy(alpha = 0.38f), Offset(0f, 0f), 25f),
+                      ),
+                  )
+                  Box(
+                      Modifier
+                          .align(Alignment.TopCenter)
+                          .padding(top = 18.dp)
+                          .width(164.dp)
+                          .height(1.dp)
+                          .background(
+                              Brush.horizontalGradient(
+                                  listOf(Color.Transparent, Color.White.copy(alpha = 0.55f), c.accent.copy(alpha = 0.42f), Color.Transparent),
+                              ),
+                          ),
+                  )
+              }
+          }
+          '''
+
+          page = page[:hero_start] + hero + page[hero_end:]
+
+          action_anchor = '''            Text(
+                "\${vm.engine.name}  ·  изменить поисковик",
+                color = c.dim,
+                fontSize = 12.sp,
+                modifier = Modifier.clickable { onEngines() },
+            )
+'''
+          actions = action_anchor + '''
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                StartAction("＋ Новая вкладка", Modifier.weight(1f)) { vm.newTab() }
+                if (vm.closedTabs.isNotEmpty() && !vm.ghostModeEnabled) {
+                    StartAction("↶ Вернуть вкладку", Modifier.weight(1f)) { vm.restoreClosedTab() }
+                }
+            }
+'''
+          if action_anchor in page and "StartAction(" not in page:
+              page = page.replace(action_anchor, actions, 1)
+
+          section_anchor = '@Composable\nprivate fun SectionTitle(text: String) {'
+          action_component = '''@Composable
+          private fun StartAction(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+              val c = LocalSwaga.current
+              Box(
+                  modifier
+                      .height(42.dp)
+                      .panel(RoundedCornerShape(15.dp))
+                      .clickable(onClick = onClick)
+                      .padding(horizontal = 10.dp),
+                  contentAlignment = Alignment.Center,
+              ) {
+                  Text(
+                      label,
+                      color = c.text,
+                      fontSize = 11.sp,
+                      fontWeight = FontWeight.SemiBold,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis,
+                  )
+              }
+          }
+
+          '''
+          if "private fun StartAction(" not in page:
+              page = page.replace(section_anchor, action_component + section_anchor, 1)
+          if 'ТВОЕ ОКНО В СВАГУ🤤🤤🤤' not in page or 'Свагаааа🤤🤤🤤' not in page:
+              raise SystemExit("Requested home page captions were not applied")
+          start_page.write_text(page, encoding="utf-8")
+
+          view_model = root / "src/main/java/app/swaga/browser/BrowserViewModel.kt"
+          vm_source = view_model.read_text(encoding="utf-8")
+          old_sound = "GhostSoundPlayer.play(getApplication(), enabled)"
+          new_sound = '''if (enabled) {
+                      GhostVoicePlayer.speak(getApplication(), "Ahhh, fresh meat")
+                  } else {
+                      GhostSoundPlayer.play(getApplication(), false)
+                  }'''
+          if old_sound in vm_source:
+              vm_source = vm_source.replace(old_sound, new_sound, 1)
+          elif "GhostVoicePlayer.speak" not in vm_source:
+              raise SystemExit("Could not locate Ghost Mode sound call")
+          view_model.write_text(vm_source, encoding="utf-8")
+
+          voice_file = root / "src/main/java/app/swaga/browser/GhostVoicePlayer.kt"
+          voice_file.write_text('''package app.swaga.browser
+
+          import android.content.Context
+          import android.speech.tts.TextToSpeech
+          import java.util.Locale
+
+          /**
+           * Speaks an original system-TTS version of the short Ghost Mode cue.
+           * Keeps only the application context and queues speech while TTS initializes.
+           */
+          object GhostVoicePlayer {
+              private var engine: TextToSpeech? = null
+              private var initialized = false
+              private var pendingText: String? = null
+
+              @Synchronized
+              fun speak(context: Context, text: String) {
+                  val current = engine
+                  if (current == null) {
+                      pendingText = text
+                      engine = TextToSpeech(context.applicationContext) { status ->
+                          synchronized(this) {
+                              val tts = engine ?: return@synchronized
+                              if (status == TextToSpeech.SUCCESS) {
+                                  val language = tts.setLanguage(Locale.US)
+                                  initialized = language >= TextToSpeech.LANG_AVAILABLE
+                                  if (initialized) {
+                                      tts.setSpeechRate(0.92f)
+                                      tts.setPitch(0.90f)
+                                      pendingText?.let { phrase ->
+                                          pendingText = null
+                                          tts.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "swaga-ghost-entry")
+                                      }
+                                  } else {
+                                      pendingText = null
+                                  }
+                              } else {
+                                  pendingText = null
+                              }
+                          }
+                      }
+                  } else if (initialized) {
+                      current.speak(text, TextToSpeech.QUEUE_FLUSH, null, "swaga-ghost-entry")
+                  } else {
+                      pendingText = text
+                  }
+              }
+          }
+          ''', encoding="utf-8")
           PY
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
@@ -100,7 +292,11 @@ jobs:
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -q "GhostSoundPlayer.play" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -q "GhostVoicePlayer.speak" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/GhostVoicePlayer.kt
+          grep -q "Свагаааа" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+          grep -q "ТВОЕ ОКНО В СВАГУ" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
+          grep -q "StartAction" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
           ! grep -R -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui
           grep -q "GhostModeButton" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "Icons.Filled.Lock" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
@@ -121,13 +317,7 @@ jobs:
         with:
           name: SwagaBrowser-source-snapshot
           path: |
-            android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-            android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-            android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
-            android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-            android-project/app/src/main/java/app/swaga/browser/ui/Sheets.kt
-            android-project/app/src/main/java/app/swaga/browser/themes/SwagaTheme.kt
-            android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
+            android-project/app/src/main/java/app/swaga/browser/
           if-no-files-found: error
           retention-days: 1
 
