@@ -52,7 +52,7 @@ jobs:
           for path in files:
               source = path.read_text(encoding="utf-8")
               import re
-              source = re.sub(r"\\b(?:isGhostMode|ghostMode)\\b", "ghostModeEnabled", source)
+              source = re.sub(r"\b(?:isGhostMode|ghostMode)\b", "ghostModeEnabled", source)
               path.write_text(source, encoding="utf-8")
           PY
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
@@ -60,7 +60,6 @@ jobs:
           ! grep -q "var ghostMode " android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -R -q "ghostModeEnabledEnabled" android-project/app/src/main/java/app/swaga/browser
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-          grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "Ahhh, fresh meat" android-project/app/src/main/java/app/swaga/browser/ui/GhostModeOverlay.kt
