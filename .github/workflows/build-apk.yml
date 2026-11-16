@@ -279,6 +279,106 @@ jobs:
           }
           ''', encoding="utf-8")
           PY
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("android-project/app")
+          theme = root / "src/main/java/app/swaga/browser/themes/SwagaTheme.kt"
+          source = theme.read_text(encoding="utf-8")
+          start = source.index("@Composable\\nfun Modifier.panel(")
+          replacement = """@Composable
+          fun Modifier.panel(
+              shape: Shape = RoundedCornerShape(16.dp),
+              elevated: Boolean = false,
+          ): Modifier {
+              val c = LocalSwaga.current
+              val base = if (elevated) c.surfaceHigh else c.surface
+              val depth = if (elevated) 24.dp else 13.dp
+              return if (c.glass) {
+                  this
+                      .shadow(depth, shape, clip = false)
+                      .background(
+                          Brush.linearGradient(
+                              colors = listOf(
+                                  Color.White.copy(alpha = if (c.isDark) 0.19f else 0.76f),
+                                  base.copy(alpha = if (elevated) 0.74f else 0.66f),
+                                  lerp(base, c.accent, 0.12f).copy(alpha = 0.78f),
+                                  c.bg.copy(alpha = 0.72f),
+                              ),
+                          ),
+                          shape,
+                      )
+                      .background(
+                          Brush.radialGradient(
+                              colors = listOf(c.accent.copy(alpha = 0.13f), Color.Transparent),
+                              radius = 520f,
+                          ),
+                          shape,
+                      )
+                      .border(
+                          1.dp,
+                          Brush.linearGradient(
+                              listOf(
+                                  Color.White.copy(alpha = 0.76f),
+                                  Color.White.copy(alpha = if (c.isDark) 0.13f else 0.56f),
+                                  c.accent.copy(alpha = 0.32f),
+                                  Color.White.copy(alpha = 0.22f),
+                              ),
+                          ),
+                          shape,
+                      )
+              } else {
+                  this
+                      .shadow(if (elevated) 12.dp else 6.dp, shape, clip = false)
+                      .background(
+                          Brush.linearGradient(
+                              listOf(base, lerp(base, c.surfaceHigh, 0.52f), lerp(base, c.accent, 0.045f)),
+                          ),
+                          shape,
+                      )
+                      .border(1.dp, c.outline.copy(alpha = 0.82f), shape)
+              }
+          }
+          """
+          source = source[:start] + replacement
+          theme.write_text(source, encoding="utf-8")
+
+          page = root / "src/main/java/app/swaga/browser/ui/StartPage.kt"
+          source = page.read_text(encoding="utf-8")
+          source = source.replace(
+              'Spacer(Modifier.height(16.dp))\\n  Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {',
+              '''Spacer(Modifier.height(18.dp))
+            Row(
+                Modifier.fillMaxWidth().panel(RoundedCornerShape(18.dp), elevated = true).padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(9.dp).clip(CircleShape).background(c.accent),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("СВАГА НА ПОЛНОЙ СКОРОСТИ", color = c.text, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.8.sp)
+                    Text("Быстрый доступ, приватность и твой интернет.", color = c.dim, fontSize = 10.sp)
+                }
+                Text("✦", color = c.accent, fontSize = 19.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {''',
+              1,
+          )
+          source = source.replace(
+              'Spacer(Modifier.height(42.dp))\\n            SectionTitle("БЫСТРЫЙ ДОСТУП")',
+              'Spacer(Modifier.height(34.dp))\\n            SectionTitle("ТВОИ САЙТЫ")',
+              1,
+          )
+          page.write_text(source, encoding="utf-8")
+
+          gradle = root / "build.gradle.kts"
+          g = gradle.read_text(encoding="utf-8")
+          g = g.replace('versionName = "0.2.0"', 'versionName = "0.3.0"')
+          if 'versionName = "0.3.0"' not in g:
+              raise SystemExit("Could not bump version to 0.3.0")
+          gradle.write_text(g, encoding="utf-8")
+          PY
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var ghostMode " android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
