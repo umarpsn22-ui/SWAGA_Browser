@@ -80,6 +80,9 @@ jobs:
               if "@drawable/swaga_logo_inset" not in source:
                   raise SystemExit(f"Cannot resize launcher foreground in {name}")
               path.write_text(source, encoding="utf-8")
+          inset = root / "src/main/res/drawable/swaga_logo_inset.xml"
+          inset_source = inset.read_text(encoding="utf-8").replace("@drawable/swaga_logo", "@drawable/ic_launcher_foreground")
+          inset.write_text(inset_source, encoding="utf-8")
           PY
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
@@ -100,6 +103,7 @@ jobs:
           grep -q "setDownloadListener" android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
           grep -q "desktopUserAgent" android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
           grep -q "swaga_logo_inset" android-project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          grep -q "ic_launcher_foreground" android-project/app/src/main/res/drawable/swaga_logo_inset.xml
           grep -q "#FFFFFF" android-project/app/src/main/res/drawable/ic_launcher_foreground.xml
           echo "Verified Ghost Mode, transition, redesigned start page, and #SWAGA vector icon."
 
