@@ -66,8 +66,8 @@ jobs:
           sheet_source = sheets.read_text(encoding="utf-8")
           if "import androidx.compose.material3.TextButton" not in sheet_source:
               sheet_source = sheet_source.replace(
-                  "import androidx.compose.material3.Text\\n",
-                  "import androidx.compose.material3.Text\\nimport androidx.compose.material3.TextButton\\n",
+                  "import androidx.compose.material3.Text\n",
+                  "import androidx.compose.material3.Text\nimport androidx.compose.material3.TextButton\\n",
                   1,
               )
           sheets.write_text(sheet_source, encoding="utf-8")
