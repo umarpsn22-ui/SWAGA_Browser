@@ -179,7 +179,7 @@ jobs:
                     StartAction("↶ Вернуть вкладку", Modifier.weight(1f)) { vm.restoreClosedTab() }
                 }
             }
-'''
+          '''
           if "StartAction(" not in page:
               action_position = page.index("            if (vm.ghostModeEnabled) {")
               page = page[:action_position] + actions + page[action_position:]
