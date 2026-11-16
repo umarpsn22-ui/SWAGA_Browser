@@ -40,15 +40,25 @@ jobs:
           base64 -d patches/icons-hotfix.patch.gz.b64 | gzip -dc > /tmp/swaga-icons-hotfix.patch
           git apply --check --directory=android-project /tmp/swaga-icons-hotfix.patch
           git apply --directory=android-project /tmp/swaga-icons-hotfix.patch
-          base64 -d patches/property-hotfix.patch.gz.b64 | gzip -dc > /tmp/swaga-property-hotfix.patch
-          git apply --check --directory=android-project /tmp/swaga-property-hotfix.patch
-          git apply --directory=android-project /tmp/swaga-property-hotfix.patch
-          base64 -d patches/property-hotfix2.patch.gz.b64 | gzip -dc > /tmp/swaga-property-hotfix2.patch
-          git apply --check --directory=android-project /tmp/swaga-property-hotfix2.patch
-          git apply --directory=android-project /tmp/swaga-property-hotfix2.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("android-project/app/src/main/java/app/swaga/browser")
+          files = [
+              root / "BrowserViewModel.kt",
+              root / "ui/BottomBar.kt",
+              root / "ui/BrowserApp.kt",
+              root / "ui/StartPage.kt",
+          ]
+          for path in files:
+              source = path.read_text(encoding="utf-8")
+              source = source.replace("isGhostMode", "ghostModeEnabled")
+              source = source.replace("ghostMode", "ghostModeEnabled")
+              path.write_text(source, encoding="utf-8")
+          PY
           grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           ! grep -q "var ghostMode " android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
+          grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
           grep -q "ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
           grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
