@@ -691,7 +691,7 @@ jobs:
           echo "Remaining WebView references (diagnostic):"
           grep -RnE "android.webkit.WebView|WebViewClient|WebChromeClient" "$APP_ROOT" || true
           ! grep -R -q "import android.webkit.WebView\|WebViewClient\|WebChromeClient" "$APP_ROOT"
-          grep -q "org.mozilla.geckoview:geckoview:160.0.20261104181552" android-project/app/build.gradle.kts
+          grep -q "org.mozilla.geckoview:geckoview:159.0.20261102144711" android-project/app/build.gradle.kts
           echo "GeckoView migration checks passed."
 
       - name: Upload transformed source snapshot
@@ -715,12 +715,12 @@ jobs:
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)"
           test -x "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null
-          "$SDKMANAGER" --channel=3 "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.3.1"
+          gradle-version: "8.11.1"
 
       - name: Build debug APK
         run: |
