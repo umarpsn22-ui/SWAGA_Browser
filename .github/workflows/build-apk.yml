@@ -686,7 +686,7 @@ jobs:
           APP_ROOT="android-project/app/src/main/java/app/swaga/browser"
           grep -q "org.mozilla.geckoview" "$APP_ROOT/engine/SwagaWebView.kt"
           grep -q "usePrivateMode" "$APP_ROOT/engine/SwagaWebView.kt"
-          grep -q "GeckoView" "$APP_ROOT/engine/WebViewHost.kt"
+          grep -q "SwagaGeckoTab.create" "$APP_ROOT/engine/WebViewHost.kt"
           grep -q "SwagaGeckoTab" "$APP_ROOT/tabs/Tab.kt"
           echo "Remaining WebView references (diagnostic):"
           grep -RnE "android.webkit.WebView|WebViewClient|WebChromeClient" "$APP_ROOT" || true
