@@ -30,6 +30,18 @@ jobs:
           echo "Archive used: $ARCHIVE"
           test -f android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
 
+      - name: Inspect browser engine integration points
+        run: |
+          set -euo pipefail
+          echo "=== Gradle files ==="
+          find android-project -maxdepth 3 -type f \( -name '*.gradle' -o -name '*.gradle.kts' -o -name 'gradle.properties' \) -print
+          echo "=== App dependencies ==="
+          sed -n '1,240p' android-project/app/build.gradle.kts
+          echo "=== Browser engine source files ==="
+          find android-project/app/src/main/java/app/swaga/browser -type f -name '*.kt' -print
+          echo "=== WebView references ==="
+          grep -RInE 'WebView|WebViewClient|WebChromeClient|AndroidView|loadUrl|evaluateJavascript' android-project/app/src/main/java/app/swaga/browser || true
+
       - name: Apply real browser source changes
         run: |
           set -euxo pipefail
