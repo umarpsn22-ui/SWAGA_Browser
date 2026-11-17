@@ -103,11 +103,14 @@ vm_path.write_text(vm, encoding="utf-8")
 settings_path = root / "settings.gradle.kts"
 settings = settings_path.read_text(encoding="utf-8")
 if "https://maven.mozilla.org/maven2/" not in settings:
-    settings = settings.replace(
+    marker = "dependencyResolutionManagement {"
+    head, tail = settings.split(marker, 1)
+    tail = tail.replace(
         "repositories {\n        google()\n        mavenCentral()\n",
         "repositories {\n        maven { url = uri(\"https://maven.mozilla.org/maven2/\") }\n        google()\n        mavenCentral()\n",
         1,
     )
+    settings = head + marker + tail
 settings_path.write_text(settings, encoding="utf-8")
 
 gradle_path = app / "build.gradle.kts"
