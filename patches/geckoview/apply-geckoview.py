@@ -125,21 +125,21 @@ if "org.mozilla.geckoview:geckoview:" not in gradle:
 gradle = re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 3', gradle, count=1)
 gradle = re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.1.0-gecko"', gradle, count=1)
 # AGP 9 uses built-in Kotlin. Migrate the legacy Kotlin Android plugin and JVM target DSL.
-gradle = gradle.replace('    id("org.jetbrains.kotlin.android")\\n', "")
-gradle = gradle.replace('    kotlinOptions { jvmTarget = "17" }\\n', "")
+gradle = gradle.replace('    id("org.jetbrains.kotlin.android")\n', "")
+gradle = gradle.replace('    kotlinOptions { jvmTarget = "17" }\n', "")
 if "kotlin { compilerOptions" not in gradle:
     gradle = gradle.replace(
-        "\\n}\\n\\ndependencies {",
-        "\\n}\\n\\nkotlin { compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 } }\\n\\ndependencies {",
+        "\n}\n\ndependencies {",
+        "\n}\n\nkotlin { compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 } }\n\ndependencies {",
         1,
     )
 gradle_path.write_text(gradle, encoding="utf-8")
 
-# Keep the Android Gradle toolchain aligned with the selected stable SDK.
+# Keep the Android Gradle toolchain aligned with Android API 37.
 root_gradle_path = root / "build.gradle.kts"
 root_gradle = root_gradle_path.read_text(encoding="utf-8")
 root_gradle = root_gradle.replace('id("com.android.application") version "8.5.2"', 'id("com.android.application") version "9.1.1"')
-root_gradle = root_gradle.replace('    id("org.jetbrains.kotlin.android") version "2.0.20" apply false\\n', "")
+root_gradle = root_gradle.replace('    id("org.jetbrains.kotlin.android") version "2.0.20" apply false\n', "")
 root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"', 'id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"')
 root_gradle_path.write_text(root_gradle, encoding="utf-8")
 
