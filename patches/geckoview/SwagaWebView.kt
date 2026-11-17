@@ -7,6 +7,7 @@ import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.GeckoView
+import org.mozilla.geckoview.StorageController
 import app.swaga.browser.tabs.Tab
 
 /**
@@ -193,6 +194,10 @@ class SwagaGeckoTab private constructor(
 
         fun desktopUserAgent(@Suppress("UNUSED_PARAMETER") context: Context): String =
             GeckoSession.getDefaultUserAgent()
+
+        fun clearSiteData(context: Context) {
+            runtime(context).storageController.clearData(StorageController.ClearFlags.SITE_DATA)
+        }
     }
 }
 
