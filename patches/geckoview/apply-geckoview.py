@@ -124,6 +124,7 @@ if "org.mozilla.geckoview:geckoview:" not in gradle:
     )
 gradle = re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 3', gradle, count=1)
 gradle = re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.1.0-gecko"', gradle, count=1)
+gradle_path.write_text(gradle, encoding="utf-8")
 # Use the stable Android 16 toolchain; GeckoView 159 is pinned for API 36.
 root_gradle_path = root / "build.gradle.kts"
 root_gradle = root_gradle_path.read_text(encoding="utf-8")
