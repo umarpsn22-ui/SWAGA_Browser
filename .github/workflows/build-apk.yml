@@ -393,33 +393,47 @@ jobs:
               raise SystemExit("Could not set app version to 0.4.0")
           gradle.write_text(source, encoding="utf-8")
           PY
-          grep -q "var ghostModeEnabled" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          ! grep -q "var isGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          ! grep -q "var ghostMode " android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          ! grep -R -q "ghostModeEnabledEnabled" android-project/app/src/main/java/app/swaga/browser
-          grep -q "fun setGhostMode" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -q "GhostModeAudioPlayer.play" android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
-          grep -q "pursuer-stalk-ability.mp3" android-project/app/src/main/java/app/swaga/browser/GhostModeAudioPlayer.kt
-          grep -q "ahh-fresh-meat-pursuer.mp3" android-project/app/src/main/java/app/swaga/browser/GhostModeAudioPlayer.kt
-          ! grep -R -q "GhostVoicePlayer" android-project/app/src/main/java/app/swaga/browser
-          ! grep -R -q "GhostSoundPlayer" android-project/app/src/main/java/app/swaga/browser
-          grep -q "ТВОЁ ОКНО В СВАГУ" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-          grep -q "StartAction" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-          grep -q "awaitEachGesture" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-          grep -q "rotationY = tiltY" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-          grep -q "GhostModeButton" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-          grep -q "Icons.Filled.Lock" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-          ! grep -q "VisibilityOff" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-          grep -q "#SWAGAA" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-          grep -q "#SWAGA_Browser" android-project/app/src/main/java/app/swaga/browser/ui/StartPage.kt
-          grep -q "BookmarksSheet" android-project/app/src/main/java/app/swaga/browser/ui/Sheets.kt
-          grep -q "findAllAsync" android-project/app/src/main/java/app/swaga/browser/ui/BottomBar.kt
-          grep -q "setDownloadListener" android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
-          grep -q "desktopUserAgent" android-project/app/src/main/java/app/swaga/browser/engine/SwagaWebView.kt
+          base64 -d patches/refresh-browser.py.gz.b64 | gzip -dc > /tmp/swaga-refresh-browser.py
+          python3 /tmp/swaga-refresh-browser.py android-project/app/src/main/java/app/swaga/browser
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle = Path("android-project/app/build.gradle.kts")
+          source = gradle.read_text(encoding="utf-8")
+          source = source.replace('versionName = "0.4.0"', 'versionName = "0.5.0"')
+          if 'versionName = "0.5.0"' not in source:
+              raise SystemExit("Could not set app version to 0.5.0")
+          gradle.write_text(source, encoding="utf-8")
+          PY
+          APP_ROOT="android-project/app/src/main/java/app/swaga/browser"
+          grep -q "var ghostModeEnabled" "$APP_ROOT/BrowserViewModel.kt"
+          ! grep -q "var isGhostMode" "$APP_ROOT/BrowserViewModel.kt"
+          ! grep -q "var ghostMode " "$APP_ROOT/BrowserViewModel.kt"
+          ! grep -R -q "ghostModeEnabledEnabled" "$APP_ROOT"
+          grep -q "fun setGhostMode" "$APP_ROOT/BrowserViewModel.kt"
+          ! grep -R -q "GhostModeAudioPlayer\|GhostVoicePlayer\|GhostSoundPlayer\|pursuer-stalk-ability\|ahh-fresh-meat" "$APP_ROOT"
+          grep -q "trackingProtectionEnabled" "$APP_ROOT/engine/SwagaWebView.kt"
+          grep -q "shouldInterceptRequest" "$APP_ROOT/engine/SwagaWebView.kt"
+          grep -q "prepareReader" "$APP_ROOT/BrowserViewModel.kt"
+          grep -q "HistoryStore" "$APP_ROOT/BrowserViewModel.kt"
+          grep -q "HistorySheet" "$APP_ROOT/ui/Sheets.kt"
+          grep -q "ReaderSheet" "$APP_ROOT/ui/Sheets.kt"
+          grep -q "awaitEachGesture" "$APP_ROOT/ui/StartPage.kt"
+          grep -q "PointerEventPass.Initial" "$APP_ROOT/ui/StartPage.kt"
+          grep -q "rotationY = tiltY" "$APP_ROOT/ui/StartPage.kt"
+          grep -q "GhostModeButton" "$APP_ROOT/ui/BottomBar.kt"
+          grep -q "Icons.Filled.Lock" "$APP_ROOT/ui/BottomBar.kt"
+          ! grep -q "VisibilityOff" "$APP_ROOT/ui/BottomBar.kt"
+          grep -q "#SWAGAA" "$APP_ROOT/ui/StartPage.kt"
+          grep -q "BookmarksSheet" "$APP_ROOT/ui/Sheets.kt"
+          grep -q "findAllAsync" "$APP_ROOT/ui/BottomBar.kt"
+          grep -q "setDownloadListener" "$APP_ROOT/engine/SwagaWebView.kt"
+          grep -q "ACTION_VIEW_DOWNLOADS" "$APP_ROOT/ui/BottomBar.kt"
+          grep -q "requestPinShortcut" "$APP_ROOT/ui/BottomBar.kt"
+          grep -q "desktopUserAgent" "$APP_ROOT/engine/SwagaWebView.kt"
           grep -q "swaga_logo_inset" android-project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           grep -q "ic_launcher_foreground" android-project/app/src/main/res/drawable/swaga_logo_inset.xml
           grep -q "#FFFFFF" android-project/app/src/main/res/drawable/ic_launcher_foreground.xml
-          echo "Verified Ghost Mode MP3 cues, touch-reactive hero, redesigned glass UI, and existing browser features."
+          echo "Verified silent Ghost Mode, viewport-aware hero, glass UI, local history, reader mode, tracker blocking, text zoom, downloads and home-screen shortcuts."
 
       - name: Upload transformed source snapshot
         uses: actions/upload-artifact@v4
