@@ -1,10 +1,14 @@
 package app.swaga.browser.ui
 
-import android.net.Uri
-import android.widget.VideoView
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.drawable.AnimatedImageDrawable
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.os.Build
+import android.widget.ImageView
 import app.swaga.browser.BrowserViewModel
 import app.swaga.browser.R
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -219,7 +222,7 @@ fun StartPage(
                     softWrap = false,
                 )
                 Spacer(Modifier.width(7.dp))
-                SwagaHeroVideo(Modifier.size(62.dp))
+                AnimatedSwagaSticker(Modifier.size(62.dp))
             }
 
             Spacer(Modifier.height(22.dp))
@@ -337,30 +340,34 @@ fun StartPage(
     }
 }
 
+@Suppress("NewApi")
 @Composable
-private fun SwagaHeroVideo(modifier: Modifier = Modifier) {
+private fun AnimatedSwagaSticker(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var playbackFailed by remember { mutableStateOf(false) }
-    val videoView = remember(context) {
-        VideoView(context).apply {
-            setOnPreparedListener { player ->
-                player.isLooping = true
-                player.setVolume(0f, 0f)
-                // Start only after MediaPlayer reports READY.
-                start()
-            }
-            setOnErrorListener { _, _, _ ->
-                playbackFailed = true
-                true
-            }
-            setVideoURI(
-                Uri.parse("android.resource://" + context.packageName + "/" + R.raw.swaga_hero),
-            )
+    val sticker: Drawable = remember(context) {
+        val animated = if (Build.VERSION.SDK_INT >= 28) {
+            runCatching {
+                ImageDecoder.decodeDrawable(
+                    ImageDecoder.createSource(context.resources, R.raw.swaga_sticker),
+                )
+            }.getOrNull() as? AnimatedImageDrawable
+        } else {
+            null
         }
+
+        animated?.apply {
+            repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
+        } ?: BitmapDrawable(
+            context.resources,
+            BitmapFactory.decodeResource(context.resources, R.raw.swaga_sticker),
+        )
     }
 
-    DisposableEffect(videoView) {
-        onDispose { videoView.stopPlayback() }
+    DisposableEffect(sticker) {
+        (sticker as? AnimatedImageDrawable)?.start()
+        onDispose {
+            (sticker as? AnimatedImageDrawable)?.stop()
+        }
     }
 
     Box(
@@ -370,18 +377,23 @@ private fun SwagaHeroVideo(modifier: Modifier = Modifier) {
             .background(Color(0xFF071211))
             .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp)),
     ) {
-        if (playbackFailed) {
-            Image(
-                painter = painterResource(R.drawable.swaga_hero_fallback),
-                contentDescription = "Стикер рядом с логотипом",
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            AndroidView(
-                factory = { videoView },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        AndroidView(
+            factory = { viewContext ->
+                ImageView(viewContext).apply {
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    background = null
+                    setImageDrawable(sticker)
+                    contentDescription = "Анимированный стикер Swaga"
+                }
+            },
+            update = { imageView ->
+                if (imageView.drawable !== sticker) imageView.setImageDrawable(sticker)
+                (sticker as? AnimatedImageDrawable)?.let {
+                    if (!it.isRunning) it.start()
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
