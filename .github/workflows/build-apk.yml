@@ -658,7 +658,6 @@ jobs:
           grep -q "fun setGhostMode" "$APP_ROOT/BrowserViewModel.kt"
           ! grep -R -q "GhostModeAudioPlayer\|GhostVoicePlayer\|GhostSoundPlayer\|pursuer-stalk-ability\|ahh-fresh-meat" "$APP_ROOT"
           grep -q "trackingProtectionEnabled" "$APP_ROOT/engine/SwagaWebView.kt"
-          grep -q "shouldInterceptRequest" "$APP_ROOT/engine/SwagaWebView.kt"
           grep -q "prepareReader" "$APP_ROOT/BrowserViewModel.kt"
           grep -q "HistoryStore" "$APP_ROOT/BrowserViewModel.kt"
           grep -q "HistorySheet" "$APP_ROOT/ui/Sheets.kt"
@@ -672,14 +671,26 @@ jobs:
           grep -q "#SWAGAA" "$APP_ROOT/ui/StartPage.kt"
           grep -q "BookmarksSheet" "$APP_ROOT/ui/Sheets.kt"
           grep -q "findAllAsync" "$APP_ROOT/ui/BottomBar.kt"
-          grep -q "setDownloadListener" "$APP_ROOT/engine/SwagaWebView.kt"
           grep -q "ACTION_VIEW_DOWNLOADS" "$APP_ROOT/ui/BottomBar.kt"
           grep -q "requestPinShortcut" "$APP_ROOT/ui/BottomBar.kt"
           grep -q "desktopUserAgent" "$APP_ROOT/engine/SwagaWebView.kt"
           grep -q "swaga_logo_inset" android-project/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           grep -q "ic_launcher_foreground" android-project/app/src/main/res/drawable/swaga_logo_inset.xml
           grep -q "#FFFFFF" android-project/app/src/main/res/drawable/ic_launcher_foreground.xml
-          echo "Verified silent Ghost Mode, viewport-aware hero, glass UI, local history, reader mode, tracker blocking, text zoom, downloads and home-screen shortcuts."
+          echo "Verified existing browser UI, local history, reader mode, tracker settings, text zoom, downloads and home-screen shortcuts."
+
+      - name: Migrate browser engine to GeckoView
+        run: |
+          set -euo pipefail
+          python3 patches/geckoview/apply-geckoview.py
+          APP_ROOT="android-project/app/src/main/java/app/swaga/browser"
+          grep -q "org.mozilla.geckoview" "$APP_ROOT/engine/SwagaWebView.kt"
+          grep -q "usePrivateMode" "$APP_ROOT/engine/SwagaWebView.kt"
+          grep -q "GeckoView" "$APP_ROOT/engine/WebViewHost.kt"
+          grep -q "SwagaGeckoTab" "$APP_ROOT/tabs/Tab.kt"
+          ! grep -R -q "android.webkit.WebView\|WebViewClient\|WebChromeClient" "$APP_ROOT"
+          grep -q "org.mozilla.geckoview:geckoview:160.0.20261104181552" android-project/app/build.gradle.kts
+          echo "GeckoView migration checks passed."
 
       - name: Upload transformed source snapshot
         uses: actions/upload-artifact@v4
