@@ -686,7 +686,7 @@ jobs:
         with:
           name: SwagaBrowser-source-snapshot
           path: |
-            android-project/app/src/main/java/app/swaga/browser/
+            android-project/
           if-no-files-found: error
           retention-days: 1
 
