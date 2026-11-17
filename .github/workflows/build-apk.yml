@@ -404,6 +404,238 @@ jobs:
               raise SystemExit("Could not set app version to 0.5.0")
           gradle.write_text(source, encoding="utf-8")
           PY
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64
+          import re
+
+          app = Path("android-project/app")
+          raw = app / "src/main/res/raw"
+          raw.mkdir(parents=True, exist_ok=True)
+          encoded = Path("patches/swaga_hero.mp4.b64").read_text(encoding="ascii").strip()
+          video = base64.b64decode(encoded, validate=True)
+          if len(video) < 1000:
+              raise SystemExit("Hero video asset is incomplete")
+          (raw / "swaga_hero.mp4").write_bytes(video)
+
+          page_path = app / "src/main/java/app/swaga/browser/ui/StartPage.kt"
+          source = page_path.read_text(encoding="utf-8")
+
+          imports = [
+              "import android.net.Uri",
+              "import android.widget.VideoView",
+              "import androidx.compose.runtime.DisposableEffect",
+              "import androidx.compose.ui.platform.LocalContext",
+              "import androidx.compose.ui.viewinterop.AndroidView",
+              "import androidx.compose.ui.draw.shadow",
+              "import app.swaga.browser.R",
+          ]
+          for item in imports:
+              if item not in source:
+                  anchor = "import androidx.compose"
+                  position = source.index(anchor)
+                  source = source[:position] + item + "\n" + source[position:]
+
+          source = re.sub(
+              r"    var targetTiltX: Float by mutableFloatStateOf\(0f\).*?    val heroPressed by animateFloatAsState\(.*?\n",
+              "",
+              source,
+              count=1,
+              flags=re.S,
+          )
+
+          pointer_start = source.index("    Box(\n        Modifier.fillMaxSize().pointerInput(Unit) {")
+          pointer_end = source.index("\n    ) {", pointer_start) + len("\n    ) {")
+          source = source[:pointer_start] + "    Box(Modifier.fillMaxSize()) {" + source[pointer_end:]
+
+          glow_start = source.index("\n        Box(\n            Modifier\n                .offset(x = 168.dp, y = 26.dp)")
+          glow_end = source.index("\n\n        Column(", glow_start)
+          source = source[:glow_start] + source[glow_end:]
+
+          header_start = source.index(
+              "            Row(\n"
+              "                Modifier\n"
+              "                    .fillMaxWidth()\n"
+              "                    .padding(top = 13.dp, bottom = 2.dp),"
+          )
+          header_end = source.index("\n\n            Spacer(Modifier.height(24.dp))", header_start)
+          header = """            Row(
+              Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                  "#SWAGA_Browser",
+                  color = c.text,
+                  fontSize = 19.sp,
+                  fontWeight = FontWeight.Black,
+                  letterSpacing = (-0.65).sp,
+                )
+                Text(
+                  "Высокий шанс на свагу,#SWAGA_Browser",
+                  color = c.dim,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Medium,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                )
+              }
+              Box(
+                Modifier.size(40.dp).panel(CircleShape).clickable(onClick = onSettings),
+                contentAlignment = Alignment.Center,
+              ) {
+                Icon(Icons.Filled.Settings, contentDescription = "Настройки", tint = c.text, modifier = Modifier.size(19.dp))
+              }
+            }"""
+          source = source[:header_start] + header + source[header_end:]
+
+          hero_start = source.index(
+              "            Spacer(Modifier.height(24.dp))\n"
+              "            SwagaHero(gazeX, gazeY, heroPressed)"
+          )
+          hero_end = source.index(
+              "\n\n            Row(\n"
+              "                Modifier\n"
+              "                    .fillMaxWidth()\n"
+              "                    .height(61.dp)",
+              hero_start,
+          )
+          source = source[:hero_start] + """            Spacer(Modifier.height(18.dp))
+            SwagaHero()
+            Spacer(Modifier.height(14.dp))""" + source[hero_end:]
+
+          engine_start = source.index("            Spacer(Modifier.height(9.dp))\n            Row(", source.index("BasicTextField("))
+          engine_end = source.index("\n            Spacer(Modifier.height(19.dp))", engine_start)
+          source = source[:engine_start] + source[engine_end:]
+
+          actions_start = source.index(
+              "            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {"
+          )
+          actions_end = source.index("\n\n            if (vm.ghostModeEnabled)", actions_start)
+          source = source[:actions_start] + source[actions_end:]
+
+          links_header_start = source.index(
+              "            Spacer(Modifier.height(35.dp))\n"
+              "            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {"
+          )
+          links_header_end = source.index("\n            quickLinks.chunked(4)", links_header_start)
+          source = source[:links_header_start] + """            Spacer(Modifier.height(22.dp))""" + source[links_header_end:]
+
+          recent_start = source.index("            if (vm.recent.isNotEmpty()")
+          recent_end = source.index("            Spacer(Modifier.height(34.dp))", recent_start)
+          source = source[:recent_start] + source[recent_end:]
+
+          hero_func_start = source.index("@Composable\nprivate fun SwagaHero(")
+          hero_func_end = source.index("\n@Composable\nprivate fun StartAction", hero_func_start)
+          hero_func = """@Composable
+          private fun SwagaHero() {
+              val c = LocalSwaga.current
+              Row(
+                  Modifier.fillMaxWidth().height(106.dp),
+                  horizontalArrangement = Arrangement.Center,
+                  verticalAlignment = Alignment.CenterVertically,
+              ) {
+                  Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                      Text(
+                          "#SWAGAA",
+                          color = Color(0xFFF7F9FF),
+                          fontSize = 46.sp,
+                          fontWeight = FontWeight.Black,
+                          letterSpacing = (-3.6).sp,
+                          maxLines = 1,
+                          softWrap = false,
+                          style = TextStyle(
+                              shadow = Shadow(c.text.copy(alpha = 0.20f), Offset(0f, 2f), 10f),
+                          ),
+                      )
+                  }
+                  Spacer(Modifier.width(8.dp))
+                  SwagaHeroVideo()
+              }
+          }
+
+          @Composable
+          private fun SwagaHeroVideo() {
+              val context = LocalContext.current
+              val videoView = remember(context) {
+                  VideoView(context).apply {
+                      setVideoURI(Uri.parse("android.resource:" + context.packageName + "/" + R.raw.swaga_hero))
+                      setOnPreparedListener { player ->
+                          player.isLooping = true
+                          player.setVolume(0f, 0f)
+                          start()
+                      }
+                  }
+              }
+              DisposableEffect(videoView) {
+                  onDispose { videoView.stopPlayback() }
+              }
+              Box(
+                  Modifier
+                      .size(56.dp)
+                      .shadow(10.dp, RoundedCornerShape(15.dp))
+                      .clip(RoundedCornerShape(15.dp))
+                      .background(LocalSwaga.current.surface.copy(alpha = 0.76f)),
+              ) {
+                  AndroidView(
+                      factory = { videoView },
+                      modifier = Modifier.fillMaxSize(),
+                      update = { view ->
+                          if (!view.isPlaying) view.start()
+                      },
+                  )
+              }
+          }
+          """
+          source = source[:hero_func_start] + hero_func + source[hero_func_end:]
+
+          tile_start = source.index("@Composable\nprivate fun Tile(")
+          tile_end = source.index("\n@Composable\nprivate fun Letter", tile_start)
+          tile_func = """@Composable
+          private fun Tile(title: String, modifier: Modifier, onClick: () -> Unit) {
+              val c = LocalSwaga.current
+              Column(
+                  modifier
+                      .height(78.dp)
+                      .clip(RoundedCornerShape(14.dp))
+                      .clickable(onClick = onClick)
+                      .padding(vertical = 6.dp),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.Center,
+              ) {
+                  Letter(title, 39.dp)
+                  Spacer(Modifier.height(5.dp))
+                  Text(
+                      title,
+                      color = c.text,
+                      fontSize = 9.sp,
+                      fontWeight = FontWeight.Medium,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis,
+                      textAlign = TextAlign.Center,
+                  )
+              }
+          }
+          """
+          source = source[:tile_start] + tile_func + source[tile_end:]
+
+          source = source.replace(".clip(CircleShape)\n            .background(", ".clip(RoundedCornerShape(13.dp))\n            .background(", 1)
+          source = source.replace('Text("ТВОЁ ОКНО В СВАГУ"', 'Text("ТВОЁ ОКНО В СВАГУ"') if False else source
+          page_path.write_text(source, encoding="utf-8")
+
+          gradle = app / "build.gradle.kts"
+          g = gradle.read_text(encoding="utf-8")
+          g = g.replace('versionName = "0.5.0"', 'versionName = "0.6.0"')
+          if 'versionName = "0.6.0"' not in g:
+              raise SystemExit("Could not set app version to 0.6.0")
+          gradle.write_text(g, encoding="utf-8")
+
+          if "#SWAGA_Browser" not in source or "Высокий шанс на свагу,#SWAGA_Browser" not in source:
+              raise SystemExit("Required brand header text is missing")
+          if "SwagaHeroVideo" not in source or "R.raw.swaga_hero" not in source:
+              raise SystemExit("Looping hero video is not wired into the home screen")
+          print("Applied minimal home screen, compact brand header, and looping hero video.")
+          PY
           APP_ROOT="android-project/app/src/main/java/app/swaga/browser"
           grep -q "var ghostModeEnabled" "$APP_ROOT/BrowserViewModel.kt"
           ! grep -q "var isGhostMode" "$APP_ROOT/BrowserViewModel.kt"
@@ -417,9 +649,9 @@ jobs:
           grep -q "HistoryStore" "$APP_ROOT/BrowserViewModel.kt"
           grep -q "HistorySheet" "$APP_ROOT/ui/Sheets.kt"
           grep -q "ReaderSheet" "$APP_ROOT/ui/Sheets.kt"
-          grep -q "awaitEachGesture" "$APP_ROOT/ui/StartPage.kt"
-          grep -q "PointerEventPass.Initial" "$APP_ROOT/ui/StartPage.kt"
-          grep -q "rotationY = tiltY" "$APP_ROOT/ui/StartPage.kt"
+          grep -q "Высокий шанс на свагу,#SWAGA_Browser" "$APP_ROOT/ui/StartPage.kt"
+          grep -q "SwagaHeroVideo" "$APP_ROOT/ui/StartPage.kt"
+          test -s android-project/app/src/main/res/raw/swaga_hero.mp4
           grep -q "GhostModeButton" "$APP_ROOT/ui/BottomBar.kt"
           grep -q "Icons.Filled.Lock" "$APP_ROOT/ui/BottomBar.kt"
           ! grep -q "VisibilityOff" "$APP_ROOT/ui/BottomBar.kt"
