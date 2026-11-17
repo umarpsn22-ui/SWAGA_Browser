@@ -115,6 +115,7 @@ settings_path.write_text(settings, encoding="utf-8")
 
 gradle_path = app / "build.gradle.kts"
 gradle = gradle_path.read_text(encoding="utf-8")
+gradle = re.sub(r"compileSdk\s*=\s*\d+", "compileSdk = 37", gradle, count=1)
 if "org.mozilla.geckoview:geckoview:" not in gradle:
     gradle = gradle.replace(
         'dependencies {\n',
