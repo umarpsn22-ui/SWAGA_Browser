@@ -27,6 +27,9 @@ jobs:
           test -f android-project/app/src/main/java/app/swaga/browser/themes/LiquidGlass.kt
           test -f android-project/app/src/main/res/raw/swaga_hero.mp4
 
+      - name: Apply minimal dark redesign
+        run: python3 patches/apply-minimal-dark.py android-project
+
       # Publish the unpacked project so source-level changes can be reviewed and edited,
       # rather than treating a successful APK build as proof of UI quality.
       - name: Upload source snapshot
@@ -36,9 +39,6 @@ jobs:
           path: android-project/
           if-no-files-found: error
           retention-days: 7
-
-      - name: Apply minimal dark redesign
-        run: python3 patches/apply-minimal-dark.py android-project
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -74,6 +74,8 @@ jobs:
           done
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
           unzip -l "$APK" | grep -q "libxul.so" && echo "OK   GeckoView engine packaged"
+          unzip -l "$APK" | grep -q "lib/arm64-v8a/libxul.so" && echo "OK   arm64 GeckoView packaged"
+          if unzip -l "$APK" | grep -Eq "lib/(x86|x86_64|armeabi-v7a)/"; then echo "Unexpected non-arm64 ABI payload"; exit 1; fi
           if grep -aq "LiquidGlassKt" /tmp/apk/classes*.dex; then echo "Legacy glass code still present"; exit 1; fi
 
       - name: Upload APK

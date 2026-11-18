@@ -324,6 +324,7 @@ gradle = root / "app/build.gradle.kts"
 g = gradle.read_text(encoding="utf-8")
 g = g.replace("versionCode = 3", "versionCode = 4")
 g = g.replace('versionName = "1.1.0-gecko"', 'versionName = "1.2.0-minimal-dark"')
+g = g.replace('versionName = "1.2.0-minimal-dark"', 'versionName = "1.2.0-minimal-dark"\n        ndk { abiFilters += listOf("arm64-v8a") }')
 gradle.write_text(g, encoding="utf-8")
 
 # Fail the build if any old glass API survived.
