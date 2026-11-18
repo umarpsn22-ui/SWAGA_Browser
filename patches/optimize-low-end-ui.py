@@ -49,18 +49,16 @@ if count != 1 or any(x in s for x in ["animateFloatAsState", "graphicsLayer", "M
     raise SystemExit("Could not remove per-control Compose animation/shadow layers")
 theme.write_text(s, encoding="utf-8")
 
-# Avoid a continuous MediaPlayer/SurfaceView decoder on low-memory phones.
-# The animated hero remains enabled on devices with at least 4 GiB RAM.
+# Keep the original Swaga hero video on every device so the mascot is never
+# replaced by the generic launcher icon. The Compose/control optimizations
+# below remain active on low-memory devices.
 start = java / "ui/StartPage.kt"
 s = start.read_text(encoding="utf-8")
-s = s.replace("import android.net.Uri\n", "import android.app.ActivityManager\nimport android.content.Context\nimport android.net.Uri\n")
-s = s.replace("import androidx.compose.foundation.background\n", "import androidx.compose.foundation.Image\nimport androidx.compose.foundation.background\n")
-s = s.replace("import androidx.compose.ui.platform.LocalContext\n", "import androidx.compose.ui.platform.LocalContext\nimport androidx.compose.ui.res.painterResource\n")
-old = '''private fun SwagaHeroVideo() {
-    val context = LocalContext.current
-    val videoView = remember(context) {
-'''
-new = '''private fun SwagaHeroVideo() {
+s = s.replace("import android.app.ActivityManager\n", "")
+s = s.replace("import android.content.Context\n", "")
+s = s.replace("import androidx.compose.foundation.Image\n", "")
+s = s.replace("import androidx.compose.ui.res.painterResource\n", "")
+old = """private fun SwagaHeroVideo() {
     val context = LocalContext.current
     val useStaticHero = remember(context) {
         val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -77,32 +75,13 @@ new = '''private fun SwagaHeroVideo() {
         return
     }
     val videoView = remember(context) {
-'''
-if old not in s:
-    raise SystemExit("SwagaHeroVideo anchor not found")
+"""
+new = """private fun SwagaHeroVideo() {
+    val context = LocalContext.current
+    val videoView = remember(context) {
+"""
+if (old not in s) {
+  throw new Error("Expected low-RAM mascot replacement block not found; refusing unsafe edit");
+}
 s = s.replace(old, new, 1)
 start.write_text(s, encoding="utf-8")
-
-bottom = java / "ui/BottomBar.kt"
-s = bottom.read_text(encoding="utf-8").replace("shadowElevation = 3.dp,", "shadowElevation = 0.dp,")
-bottom.write_text(s, encoding="utf-8")
-
-gradle = root / "app/build.gradle.kts"
-s = gradle.read_text(encoding="utf-8")
-old = '''    buildTypes {
-        release { isMinifyEnabled = false }
-    }
-'''
-new = '''    buildTypes {
-        release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-'''
-if old not in s:
-    raise SystemExit("Release buildTypes block not found")
-s = s.replace(old, new, 1)
-gradle.write_text(s, encoding="utf-8")
-
-print("Low-RAM UI optimizations applied: lightweight click targets, no elevation shadows, static hero below 4 GiB RAM, installable release signing.")
