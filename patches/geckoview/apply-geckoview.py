@@ -115,20 +115,20 @@ settings_path.write_text(settings, encoding="utf-8")
 
 gradle_path = app / "build.gradle.kts"
 gradle = gradle_path.read_text(encoding="utf-8")
-gradle = re.sub(r"compileSdk\s*=\s*\d+", "compileSdk = 37", gradle, count=1)
+gradle = re.sub(r"compileSdk\s*=\s*\d+", "compileSdk = 36", gradle, count=1)
 if "org.mozilla.geckoview:geckoview:" not in gradle:
     gradle = gradle.replace(
         'dependencies {\n',
-        'dependencies {\n    implementation("org.mozilla.geckoview:geckoview:159.0.20261102144711")\n',
+        'dependencies {\n    implementation("org.mozilla.geckoview:geckoview:139.0.20250609112858")\n',
         1,
     )
 gradle = re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 3', gradle, count=1)
 gradle = re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.1.0-gecko"', gradle, count=1)
 gradle_path.write_text(gradle, encoding="utf-8")
-# Use the Android API 37 toolchain required by current GeckoView and AndroidX metadata.
+# Keep the toolchain on the available Android API 36 platform.
 root_gradle_path = root / "build.gradle.kts"
 root_gradle = root_gradle_path.read_text(encoding="utf-8")
-root_gradle = root_gradle.replace('id("com.android.application") version "8.5.2"', 'id("com.android.application") version "9.5.0"')
+root_gradle = root_gradle.replace('id("com.android.application") version "8.5.2"', 'id("com.android.application") version "8.9.1"')
 root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.android") version "2.0.20"', 'id("org.jetbrains.kotlin.android") version "2.2.20"')
 root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"', 'id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"')
 root_gradle_path.write_text(root_gradle, encoding="utf-8")
