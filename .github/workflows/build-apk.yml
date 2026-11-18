@@ -688,12 +688,14 @@ jobs:
           python3 /tmp/swaga-glass-material.py android-project/app/src/main/java/app/swaga/browser/themes/SwagaTheme.kt
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           app = Path("android-project/app/src/main/java/app/swaga/browser")
           theme_path = app / "themes/SwagaTheme.kt"
           theme = theme_path.read_text(encoding="utf-8")
-          start = theme.rfind("@Composable\\nfun Modifier.panel(")
-          if start < 0:
+          panel_at = theme.find("fun Modifier.panel(")
+          panel_start = theme.rfind("@Composable", 0, panel_at)
+          if panel_at < 0 or panel_start < 0:
               raise SystemExit("Liquid-glass panel function was not found")
           panel = """@Composable
           fun Modifier.panel(
@@ -752,28 +754,13 @@ jobs:
               }
           }
           """
-          theme_path.write_text(theme[:start] + panel, encoding="utf-8")
+          theme_path.write_text(theme[:panel_start] + panel, encoding="utf-8")
 
           page_path = app / "ui/StartPage.kt"
           page = page_path.read_text(encoding="utf-8")
-          old_background = """        Box(
-                  Modifier
-                      .fillMaxSize()
-                      .background(
-                          Brush.verticalGradient(
-                              listOf(c.bg, c.bg, c.surface.copy(alpha = 0.58f)),
-                          ),
-                      ),
-              )
-          """
-          if old_background not in page:
-              # Match the same block independent of indentation.
-              import re
-              pattern = re.compile(r"        Box\\(\\s*Modifier\\s*\\.fillMaxSize\\(\\)\\s*\\.background\\(\\s*Brush\\.verticalGradient\\(\\s*listOf\\(c\\.bg, c\\.bg, c\\.surface\\.copy\\(alpha = 0\\.58f\\)\\),?\\s*\\),?\\s*\\),?\\s*\\)")
-              match = pattern.search(page)
-              if not match:
-                  raise SystemExit("Could not locate start-page background for glass lighting")
-              old_background = match.group(0)
+          bg_start = page.index("        Box(\\n            Modifier\\n                .fillMaxSize()")
+          bg_end = page.index("\\n\\n        Column(", bg_start)
+          old_background = page[bg_start:bg_end]
           ambient = old_background + """
           Box(
               Modifier.fillMaxSize().background(
@@ -794,7 +781,7 @@ jobs:
               ),
           )
           """
-          page = page.replace(old_background, ambient, 1)
+          page = page[:bg_start] + ambient + page[bg_end:]
 
           header_old = "Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),"
           header_new = """Modifier
@@ -805,29 +792,19 @@ jobs:
           if header_old in page:
               page = page.replace(header_old, header_new, 1)
 
-          tile_old = """      modifier
-              .height(78.dp)
-              .clip(RoundedCornerShape(14.dp))
-              .clickable(onClick = onClick)
-              .padding(vertical = 6.dp),"""
-          tile_new = """      modifier
-              .height(82.dp)
-              .panel(RoundedCornerShape(18.dp), elevated = true)
-              .clickable(onClick = onClick)
-              .padding(vertical = 7.dp),"""
-          if tile_old not in page:
+          tile_pattern = re.compile(r"(modifier\\s*\\n\\s*)\\.height\\(78\\.dp\\)\\s*\\n\\s*\\.clip\\(RoundedCornerShape\\(14\\.dp\\)\\)")
+          page, tile_count = tile_pattern.subn(r"\\1.height(82.dp)\\n            .panel(RoundedCornerShape(18.dp), elevated = true)", page, count=1)
+          if tile_count != 1:
               raise SystemExit("Could not find quick-link tile layout")
-          page = page.replace(tile_old, tile_new, 1)
           page_path.write_text(page, encoding="utf-8")
 
           gradle = Path("android-project/app/build.gradle.kts")
           g = gradle.read_text(encoding="utf-8")
-          import re
           g, n = re.subn(r'versionName\\s*=\\s*"[^"]+"', 'versionName = "1.2.0-liquid-glass"', g, count=1)
           if n != 1:
               raise SystemExit("Could not update visible app version")
           gradle.write_text(g, encoding="utf-8")
-          print("Applied liquid-glass home surfaces and session-preserving tab lifecycle.")
+          print("Applied liquid-glass home surfaces.")
           PY
           APP_ROOT="android-project/app/src/main/java/app/swaga/browser"
           grep -q "var ghostModeEnabled" "$APP_ROOT/BrowserViewModel.kt"
