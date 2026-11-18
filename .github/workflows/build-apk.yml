@@ -30,28 +30,37 @@ jobs:
           echo "Archive used: $ARCHIVE"
           test -f android-project/app/src/main/java/app/swaga/browser/BrowserViewModel.kt
 
-      - name: Align Kotlin Compose compiler plugin version
+      - name: Align Kotlin and Compose compiler plugin versions
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
-          candidates = list(Path("android-project").rglob("*.gradle.kts"))
-          old = 'id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"'
-          new = 'id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"'
-          changed = []
-          for path in candidates:
+          root = Path("android-project")
+          targets = {
+              "org.jetbrains.kotlin.android": 0,
+              "org.jetbrains.kotlin.plugin.compose": 0,
+          }
+          pattern = re.compile(
+              r'(id\\(["\\'](?P<plugin>org\\.jetbrains\\.kotlin\\.(?:android|plugin\\.compose))["\\']\\)\\s+version\\s+["\\'])[^"\\']+(["\\'])'
+          )
+          for path in root.rglob("*.gradle.kts"):
               source = path.read_text(encoding="utf-8")
-              count = source.count(old)
-              if count:
-                  path.write_text(source.replace(old, new), encoding="utf-8")
-                  changed.append((str(path), count))
-          if not changed:
-              raise SystemExit("Compose plugin declaration 2.1.20 was not found; refusing a silent no-op")
-          for path, count in changed:
-              print(f"Updated {count} Compose plugin declaration(s) in {path}")
+              def replace(match):
+                  plugin = match.group("plugin")
+                  targets[plugin] += 1
+                  return match.group(1) + "2.2.20" + match.group(2)
+              updated = pattern.sub(replace, source)
+              if updated != source:
+                  path.write_text(updated, encoding="utf-8")
+          missing = [plugin for plugin, count in targets.items() if count == 0]
+          if missing:
+              raise SystemExit("Missing Kotlin plugin declarations: " + ", ".join(missing))
+          for plugin, count in targets.items():
+              print(f"Aligned {plugin} to 2.2.20 ({count} declaration(s))")
           PY
-          grep -RIn 'org.jetbrains.kotlin.plugin.compose.*2.2.20' android-project --include='*.gradle.kts'
+          grep -RInE 'org.jetbrains.kotlin.(android|plugin.compose).*2.2.20' android-project --include='*.gradle.kts'
 
       - name: Inspect browser engine integration points
         run: |
