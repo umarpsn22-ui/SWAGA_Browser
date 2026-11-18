@@ -59,6 +59,10 @@ class SwagaGeckoTab private constructor(
         runtime(context).webExtensionController
             .ensureBuiltIn(BRIDGE_EXTENSION_URI, BRIDGE_EXTENSION_ID)
             .accept({ extension ->
+                if (extension == null) {
+                    return@accept
+                }
+
                 if (target.isOpen) {
                     target.webExtensionController.setMessageDelegate(
                         extension,
