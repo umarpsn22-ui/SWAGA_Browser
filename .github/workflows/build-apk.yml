@@ -71,7 +71,7 @@ jobs:
           set -euo pipefail
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
-          rm -rf /tmp/apk && mkdir /tmp/apk && unzip -q "$APK" 'classes*.dex' 'res/raw/*' -d /tmp/apk || unzip -q "$APK" 'classes*.dex' -d /tmp/apk
+          rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
           for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
