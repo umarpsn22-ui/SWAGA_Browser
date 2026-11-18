@@ -7,7 +7,7 @@ java = app / "src/main/java/app/swaga/browser"
 engine = java / "engine"
 patches = Path("patches/geckoview")
 
-# Install the GeckoView session adapter and Compose host.
+# Install the GeckoView session adapter, Compose host, and privileged JS bridge.
 (engine / "SwagaWebView.kt").write_text(
     (patches / "SwagaWebView.kt").read_text(encoding="utf-8"),
     encoding="utf-8",
@@ -16,12 +16,23 @@ patches = Path("patches/geckoview")
     (patches / "WebViewHost.kt").read_text(encoding="utf-8"),
     encoding="utf-8",
 )
+extension_source = patches / "swaga_bridge"
+extension_target = app / "src/main/assets/web_extensions/swaga_bridge"
+extension_target.mkdir(parents=True, exist_ok=True)
+for name in ("manifest.json", "bridge.js"):
+    (extension_target / name).write_text(
+        (extension_source / name).read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
 
 # Replace the platform WebView reference with the Gecko-backed tab adapter.
 tab_path = java / "tabs/Tab.kt"
 tab = tab_path.read_text(encoding="utf-8")
 tab = tab.replace("import android.webkit.WebView\n", "")
-tab = tab.replace("import androidx.compose.runtime.setValue\n", "import androidx.compose.runtime.setValue\nimport app.swaga.browser.engine.SwagaGeckoTab\n")
+tab = tab.replace(
+    "import androidx.compose.runtime.setValue\n",
+    "import androidx.compose.runtime.setValue\nimport app.swaga.browser.engine.SwagaGeckoTab\n",
+)
 tab = tab.replace("var webView: WebView? = null", "var webView: SwagaGeckoTab? = null\n    var ghostSession: Boolean = false")
 tab = tab.replace("Состояние одной вкладки. WebView существует только у активной вкладки:", "Состояние одной вкладки. GeckoSession существует только у активной вкладки:")
 tab_path.write_text(tab, encoding="utf-8")
@@ -31,6 +42,12 @@ vm_path = java / "BrowserViewModel.kt"
 vm = vm_path.read_text(encoding="utf-8")
 vm = vm.replace("import android.webkit.CookieManager\n", "")
 vm = vm.replace("import android.webkit.WebSettings\n", "")
+if "import app.swaga.browser.engine.SwagaGeckoTab" not in vm:
+    vm = vm.replace(
+        "package app.swaga.browser\n",
+        "package app.swaga.browser\n\nimport app.swaga.browser.engine.SwagaGeckoTab\n",
+        1,
+    )
 vm = vm.replace("activeTab?.webView?.reload()", "activeTab?.webView?.setTrackingProtection(enabled)")
 vm = vm.replace(
     """        CookieManager.getInstance().removeAllCookies(null)
@@ -125,6 +142,7 @@ if "org.mozilla.geckoview:geckoview:" not in gradle:
 gradle = re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 3', gradle, count=1)
 gradle = re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.1.0-gecko"', gradle, count=1)
 gradle_path.write_text(gradle, encoding="utf-8")
+
 # Keep the toolchain on the available Android API 36 platform.
 root_gradle_path = root / "build.gradle.kts"
 root_gradle = root_gradle_path.read_text(encoding="utf-8")
@@ -133,10 +151,14 @@ root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.android") version "2
 root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"', 'id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"')
 root_gradle_path.write_text(root_gradle, encoding="utf-8")
 
-# Ensure no platform WebView remains in active browser source.
+# Ensure the platform WebView and unsupported evaluateJS call are gone.
 active = "\n".join(p.read_text(encoding="utf-8") for p in java.rglob("*.kt"))
 if "android.webkit.WebView" in active or "WebViewClient" in active or "WebChromeClient" in active:
     raise SystemExit("A platform WebView dependency remains in active Kotlin source")
+if "evaluateJS(" in active:
+    raise SystemExit("Unsupported GeckoSession.evaluateJS call remains")
 if "SwagaGeckoTab" not in active or "org.mozilla.geckoview" not in active:
     raise SystemExit("GeckoView integration did not land")
-print("GeckoView migration source applied: GeckoSession tabs, private sessions, tracking protection, find-in-page, reader JS bridge, desktop viewport and Mozilla Maven dependency.")
+if not (extension_target / "manifest.json").exists() or not (extension_target / "bridge.js").exists():
+    raise SystemExit("Bundled GeckoView JavaScript bridge was not installed")
+print("GeckoView migration applied: session-scoped WebExtension JavaScript bridge, private sessions, tracking protection, find-in-page, desktop viewport and Mozilla Maven dependency.")

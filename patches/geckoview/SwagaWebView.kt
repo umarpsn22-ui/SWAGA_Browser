@@ -1,18 +1,21 @@
 package app.swaga.browser.engine
 
 import android.content.Context
-import android.view.ViewGroup
+import android.os.Handler
+import android.os.Looper
 import org.json.JSONObject
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoSessionSettings
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.StorageController
+import org.mozilla.geckoview.WebExtension
 import app.swaga.browser.tabs.Tab
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Gecko-backed tab adapter. The adapter keeps the browser UI independent from
- * GeckoView's session API while all page rendering is performed by Gecko.
+ * Gecko-backed tab adapter. Page JavaScript is executed by a privileged,
+ * APK-bundled WebExtension and returned over a session-scoped native port.
  */
 class SwagaGeckoTab private constructor(
     private val context: Context,
@@ -21,6 +24,16 @@ class SwagaGeckoTab private constructor(
 ) {
     val view: GeckoView = GeckoView(context)
     private var session: GeckoSession = newSession()
+
+    private data class PendingJsCall(
+        val payload: JSONObject,
+        val callback: (String?) -> Unit,
+        var sentPort: WebExtension.Port? = null,
+    )
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val pendingJsCalls = LinkedHashMap<String, PendingJsCall>()
+    private var bridgePort: WebExtension.Port? = null
 
     inner class EngineSettings {
         var textZoom: Int = tab.textZoom
@@ -37,6 +50,65 @@ class SwagaGeckoTab private constructor(
         var cacheMode: Int = 0
     }
     val settings = EngineSettings()
+
+    private fun attachJavaScriptBridge(target: GeckoSession) {
+        runtime(context).webExtensionController
+            .ensureBuiltIn(BRIDGE_EXTENSION_URI, BRIDGE_EXTENSION_ID)
+            .accept({ extension ->
+                if (target.isOpen) {
+                    target.webExtensionController.setMessageDelegate(
+                        extension,
+                        object : WebExtension.MessageDelegate {
+                            override fun onConnect(port: WebExtension.Port) {
+                                if (port.sender.session !== target) {
+                                    port.disconnect()
+                                    return
+                                }
+                                port.setDelegate(object : WebExtension.PortDelegate {
+                                    override fun onPortMessage(
+                                        message: Any,
+                                        receivedPort: WebExtension.Port,
+                                    ) {
+                                        val response = message as? JSONObject ?: return
+                                        val requestId = response.optString("id")
+                                        val pending = pendingJsCalls.remove(requestId) ?: return
+                                        val result = if (
+                                            response.has("result") && !response.isNull("result")
+                                        ) response.optString("result") else null
+                                        pending.callback(result)
+                                        flushJavaScriptQueue()
+                                    }
+
+                                    override fun onDisconnect(disconnectedPort: WebExtension.Port) {
+                                        if (bridgePort === disconnectedPort) bridgePort = null
+                                        pendingJsCalls.values.forEach { it.sentPort = null }
+                                    }
+                                })
+                                bridgePort = port
+                                flushJavaScriptQueue()
+                            }
+                        },
+                        BRIDGE_NATIVE_APP,
+                    )
+                }
+            }, {
+                // Requests time out cleanly if the bundled extension cannot be installed.
+            })
+    }
+
+    private fun flushJavaScriptQueue() {
+        val port = bridgePort ?: return
+        pendingJsCalls.values.forEach { pending ->
+            if (pending.sentPort !== port) {
+                try {
+                    port.postMessage(pending.payload)
+                    pending.sentPort = port
+                } catch (_: RuntimeException) {
+                    pending.sentPort = null
+                }
+            }
+        }
+    }
 
     private fun newSession(): GeckoSession {
         val options = GeckoSessionSettings.Builder()
@@ -96,6 +168,7 @@ class SwagaGeckoTab private constructor(
                 }
             })
             created.open(runtime(context))
+            attachJavaScriptBridge(created)
             view.setSession(created)
         }
     }
@@ -120,14 +193,17 @@ class SwagaGeckoTab private constructor(
     fun onResume() = session.setActive(true)
 
     fun evaluateJavascript(script: String, callback: (String?) -> Unit) {
-        session.evaluateJS(script).accept { value ->
-            val json = when (value) {
-                null -> "null"
-                is String -> JSONObject.quote(value)
-                else -> value.toString()
-            }
-            callback(json)
-        }
+        val requestId = nextRequestId.incrementAndGet().toString()
+        val payload = JSONObject()
+            .put("type", "evaluate")
+            .put("id", requestId)
+            .put("script", script)
+        pendingJsCalls[requestId] = PendingJsCall(payload, callback)
+        mainHandler.postDelayed({
+            val expired = pendingJsCalls.remove(requestId)
+            expired?.callback?.invoke(null)
+        }, JS_REQUEST_TIMEOUT_MS)
+        flushJavaScriptQueue()
     }
 
     fun findAllAsync(query: String) {
@@ -166,6 +242,10 @@ class SwagaGeckoTab private constructor(
     fun setPrivateMode(enabled: Boolean) {
         if (privateMode == enabled) return
         val currentUrl = tab.url
+        bridgePort?.disconnect()
+        bridgePort = null
+        pendingJsCalls.values.forEach { it.callback(null) }
+        pendingJsCalls.clear()
         if (view.session != null) view.releaseSession()
         if (session.isOpen) session.close()
         privateMode = enabled
@@ -174,12 +254,23 @@ class SwagaGeckoTab private constructor(
     }
 
     fun release() {
+        bridgePort?.disconnect()
+        bridgePort = null
+        pendingJsCalls.values.forEach { it.callback(null) }
+        pendingJsCalls.clear()
         if (view.session != null) view.releaseSession()
         if (session.isOpen) session.close()
         if (tab.webView === this) tab.webView = null
     }
 
     companion object {
+        private const val BRIDGE_EXTENSION_URI =
+            "resource://android/assets/web_extensions/swaga_bridge/"
+        private const val BRIDGE_EXTENSION_ID = "swaga-js-bridge@swaga.browser"
+        private const val BRIDGE_NATIVE_APP = "swaga_browser"
+        private const val JS_REQUEST_TIMEOUT_MS = 15_000L
+        private val nextRequestId = AtomicLong(0)
+
         @Volatile private var sharedRuntime: GeckoRuntime? = null
 
         private fun runtime(context: Context): GeckoRuntime =
