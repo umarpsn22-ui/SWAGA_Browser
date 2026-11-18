@@ -23,7 +23,6 @@ class SwagaGeckoTab private constructor(
     private var privateMode: Boolean,
 ) {
     val view: GeckoView = GeckoView(context)
-    private var session: GeckoSession = newSession()
 
     private data class PendingJsCall(
         val payload: JSONObject,
@@ -34,6 +33,11 @@ class SwagaGeckoTab private constructor(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pendingJsCalls = LinkedHashMap<String, PendingJsCall>()
     private var bridgePort: WebExtension.Port? = null
+    private lateinit var session: GeckoSession
+
+    init {
+        session = newSession()
+    }
 
     inner class EngineSettings {
         var textZoom: Int = tab.textZoom
