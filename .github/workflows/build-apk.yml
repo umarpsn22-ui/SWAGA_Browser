@@ -83,8 +83,11 @@ jobs:
 
       - name: Verify release signature
         run: |
+          set -euo pipefail
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
-          apksigner verify --verbose "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print -quit)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
