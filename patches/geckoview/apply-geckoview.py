@@ -112,6 +112,43 @@ vm = vm.replace(
 )
 if "CookieManager" in vm or "WebSettings" in vm:
     raise SystemExit("Legacy WebView imports/references remain in BrowserViewModel")
+
+# Preserve Gecko sessions across tab switches, but release them on real tab close.
+close_anchor = """    fun closeTab(tab: Tab) {
+        if (ghostModeEnabled) return
+"""
+close_replacement = """    fun closeTab(tab: Tab) {
+        if (ghostModeEnabled) return
+        tab.webView?.release()
+"""
+if close_anchor not in vm:
+    raise SystemExit("Could not find closeTab() to release closed tab sessions")
+vm = vm.replace(close_anchor, close_replacement, 1)
+
+start_anchor = "    fun closeToStart(tab: Tab) = tab.resetToStart()"
+start_replacement = """    fun closeToStart(tab: Tab) {
+        tab.webView?.release()
+        tab.resetToStart()
+    }"""
+if start_anchor not in vm:
+    raise SystemExit("Could not find closeToStart() to release its Gecko session")
+vm = vm.replace(start_anchor, start_replacement, 1)
+
+persist_anchor = "    fun persist() {"
+if persist_anchor not in vm:
+    raise SystemExit("Could not find persist() for ViewModel cleanup")
+vm = vm.replace(
+    persist_anchor,
+    """    override fun onCleared() {
+        tabs.forEach { it.webView?.release() }
+        super.onCleared()
+    }
+
+""" + persist_anchor,
+    1,
+)
+vm_path.write_text(vm, encoding="utf-8")
+
 if "setPrivateMode(true)" not in vm or "setPrivateMode(false)" not in vm:
     raise SystemExit("Ghost Mode was not connected to Gecko private sessions")
 vm_path.write_text(vm, encoding="utf-8")
