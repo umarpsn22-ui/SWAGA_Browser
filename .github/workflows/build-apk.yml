@@ -27,6 +27,16 @@ jobs:
           test -f android-project/app/src/main/java/app/swaga/browser/themes/LiquidGlass.kt
           test -f android-project/app/src/main/res/raw/swaga_hero.mp4
 
+      # Publish the unpacked project so source-level changes can be reviewed and edited,
+      # rather than treating a successful APK build as proof of UI quality.
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwagaBrowser-source-snapshot
+          path: android-project/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
