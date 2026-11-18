@@ -80,8 +80,7 @@ new = """private fun SwagaHeroVideo() {
     val context = LocalContext.current
     val videoView = remember(context) {
 """
-if (old not in s) {
-  throw new Error("Expected low-RAM mascot replacement block not found; refusing unsafe edit");
-}
+if old not in s:
+    raise SystemExit("Expected low-RAM mascot replacement block not found; refusing unsafe edit")
 s = s.replace(old, new, 1)
 start.write_text(s, encoding="utf-8")
