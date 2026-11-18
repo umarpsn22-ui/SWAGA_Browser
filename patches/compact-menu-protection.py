@@ -41,6 +41,16 @@ replacement = """            ) {
                     onClick = { menu = false; onReader() },
                 )
                 DropdownMenuItem(
+                    text = { Text("Увеличить текст") },
+                    enabled = onPage,
+                    onClick = { menu = false; vm.changePageTextZoom(tab, 10) },
+                )
+                DropdownMenuItem(
+                    text = { Text("Уменьшить текст") },
+                    enabled = onPage,
+                    onClick = { menu = false; vm.changePageTextZoom(tab, -10) },
+                )
+                DropdownMenuItem(
                     text = { Text(if (tab?.desktopMode == true) "Мобильная версия" else "Версия для компьютера") },
                     enabled = onPage,
                     onClick = { menu = false; tab?.let(vm::toggleDesktopMode) },
@@ -79,6 +89,31 @@ replacement = """            ) {
                             val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("Адрес страницы", url))
                             vm.message = "Адрес скопирован."
+                        }
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Ярлык на главный экран") },
+                    enabled = onPage && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O,
+                    onClick = {
+                        menu = false
+                        val url = tab?.url
+                        if (!url.isNullOrBlank()) {
+                            val manager = ctx.getSystemService(ShortcutManager::class.java)
+                            if (manager?.isRequestPinShortcutSupported == true) {
+                                val shortcutIntent = Intent(ctx, MainActivity::class.java).apply {
+                                    action = Intent.ACTION_VIEW
+                                    data = Uri.parse(url)
+                                }
+                                val label = (tab.title.ifBlank { Uri.parse(url).host ?: "Сайт" }).take(24)
+                                val info = ShortcutInfo.Builder(ctx, "swaga-${url.hashCode()}")
+                                    .setShortLabel(label)
+                                    .setLongLabel(label)
+                                    .setIcon(Icon.createWithResource(ctx, R.mipmap.ic_launcher))
+                                    .setIntent(shortcutIntent)
+                                    .build()
+                                manager.requestPinShortcut(info, null)
+                            } else vm.message = "Этот лаунчер не поддерживает ярлыки."
                         }
                     },
                 )
@@ -181,5 +216,14 @@ if old not in s:
     raise SystemExit("SettingsSheet call site not found")
 s = s.replace(old, new, 1)
 app.write_text(s, encoding="utf-8")
+
+# Apply GeckoView's native tracking protection to every currently open tab.
+vm = base / "BrowserViewModel.kt"
+s = vm.read_text(encoding="utf-8")
+s = s.replace(
+    "activeTab?.webView?.setTrackingProtection(enabled)",
+    "tabs.forEach { it.webView?.setTrackingProtection(enabled) }",
+)
+vm.write_text(s, encoding="utf-8")
 
 print("Compact website menu, moved global tab/library actions into Settings, and clarified GeckoView tracker protection.")
