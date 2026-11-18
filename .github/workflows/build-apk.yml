@@ -7,6 +7,7 @@ on:
       - "swaga-src.zip"
       - ".github/workflows/build-apk.yml"
       - "patches/optimize-low-end-ui.py"
+      - "patches/compact-menu-protection.py"
 
 permissions:
   contents: read
