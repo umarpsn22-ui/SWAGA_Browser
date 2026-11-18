@@ -5,6 +5,18 @@ import sys
 root = Path(sys.argv[1])
 java = root / "app/src/main/java/app/swaga/browser"
 
+# Sign release builds with the standard Android debug key so CI produces an
+# installable APK and apksigner can validate its APK Signature Scheme blocks.
+gradle = root / "app/build.gradle.kts"
+g = gradle.read_text(encoding="utf-8")
+old_release = "release { isMinifyEnabled = false }"
+new_release = 'release { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("debug") }'
+if old_release in g:
+    g = g.replace(old_release, new_release, 1)
+elif 'signingConfig = signingConfigs.getByName("debug")' not in g:
+    raise SystemExit("Could not locate release buildType to configure CI signing")
+gradle.write_text(g, encoding="utf-8")
+
 theme = java / "themes/SwagaTheme.kt"
 s = theme.read_text(encoding="utf-8")
 for line in [
