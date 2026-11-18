@@ -1,0 +1,7 @@
+root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"', 'id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"')
+root_gradle = re.sub(
+    r'id\("org\.jetbrains\.kotlin\.plugin\.compose"\)\s+version\s+"[^"]+"',
+    'id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"',
+    root_gradle,
+    count=1,
+)
