@@ -758,11 +758,13 @@ jobs:
 
           page_path = app / "ui/StartPage.kt"
           page = page_path.read_text(encoding="utf-8")
-          bg_start = page.index("        Box(\\n            Modifier\\n                .fillMaxSize()")
-          bg_end = page.index("\\n\\n        Column(", bg_start)
+          root_box = page.find("    Box(Modifier.fillMaxSize()) {")
+          bg_start = page.find("        Box(", root_box)
+          bg_end = page.find("        Column(", bg_start)
+          if root_box < 0 or bg_start < 0 or bg_end < 0:
+              raise SystemExit("Could not locate home screen background")
           old_background = page[bg_start:bg_end]
-          ambient = old_background + """
-          Box(
+          ambient = old_background + """        Box(
               Modifier.fillMaxSize().background(
                   Brush.radialGradient(
                       colors = listOf(c.accent.copy(alpha = 0.18f), Color.Transparent),
@@ -792,15 +794,19 @@ jobs:
           if header_old in page:
               page = page.replace(header_old, header_new, 1)
 
-          tile_pattern = re.compile(r"(modifier\\s*\\n\\s*)\\.height\\(78\\.dp\\)\\s*\\n\\s*\\.clip\\(RoundedCornerShape\\(14\\.dp\\)\\)")
-          page, tile_count = tile_pattern.subn(r"\\1.height(82.dp)\\n            .panel(RoundedCornerShape(18.dp), elevated = true)", page, count=1)
-          if tile_count != 1:
+          if ".height(78.dp)" not in page or ".clip(RoundedCornerShape(14.dp))" not in page:
               raise SystemExit("Could not find quick-link tile layout")
+          page = page.replace(".height(78.dp)", ".height(82.dp)", 1)
+          page = page.replace(
+              ".clip(RoundedCornerShape(14.dp))",
+              ".panel(RoundedCornerShape(18.dp), elevated = true)",
+              1,
+          )
           page_path.write_text(page, encoding="utf-8")
 
           gradle = Path("android-project/app/build.gradle.kts")
           g = gradle.read_text(encoding="utf-8")
-          g, n = re.subn(r'versionName\\s*=\\s*"[^"]+"', 'versionName = "1.2.0-liquid-glass"', g, count=1)
+          g, n = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.2.0-liquid-glass"', g, count=1)
           if n != 1:
               raise SystemExit("Could not update visible app version")
           gradle.write_text(g, encoding="utf-8")
