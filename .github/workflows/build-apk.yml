@@ -34,6 +34,9 @@ jobs:
       - name: Optimize Compose UI for low-memory devices
         run: python3 patches/optimize-low-end-ui.py android-project
 
+      - name: Compact browser menu and configure protection UI
+        run: python3 patches/compact-menu-protection.py android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v4
