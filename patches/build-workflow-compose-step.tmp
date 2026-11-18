@@ -1,0 +1,35 @@
+      - name: Align Kotlin and Compose compiler plugin versions
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          changed = []
+          for path in Path("android-project").rglob("*.gradle.kts"):
+              source = path.read_text(encoding="utf-8")
+              updated = re.sub(
+                  r'(id\("org\.jetbrains\.kotlin\.plugin\.compose"\)\s+version\s+")[^"]+(")',
+                  r'\g<1>2.2.20\g<2>',
+                  source,
+              )
+              if updated != source:
+                  path.write_text(updated, encoding="utf-8")
+                  changed.append(str(path))
+
+          if not changed:
+              print("Compose plugin declaration is not present in the source archive; applying migration defaults")
+          else:
+              for path in changed:
+                  print(f"Aligned Compose plugin to 2.2.20 in {path}")
+
+          plugin_lines = []
+          for path in Path("android-project").rglob("*.gradle.kts"):
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  if "org.jetbrains.kotlin.plugin.compose" in line:
+                      plugin_lines.append(line)
+          if not plugin_lines:
+              raise SystemExit("Compose plugin declaration was not found after migration")
+          if any("2.2.20" not in line for line in plugin_lines):
+              raise SystemExit("Compose plugin is not aligned with Kotlin 2.2.20")
+          PY
