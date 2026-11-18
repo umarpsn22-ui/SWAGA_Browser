@@ -31,8 +31,10 @@ jobs:
       - name: Apply minimal dark redesign
         run: python3 patches/apply-minimal-dark.py android-project
 
-      # Publish the unpacked project so source-level changes can be reviewed and edited,
-      # rather than treating a successful APK build as proof of UI quality.
+      - name: Optimize Compose UI for low-memory devices
+        run: python3 patches/optimize-low-end-ui.py android-project
+
+      # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v4
         with:
@@ -59,9 +61,9 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android-project
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleRelease
 
       # Proves the new code really ended up in the APK (not only in the sources).
       - name: Verify APK contents
@@ -79,11 +81,14 @@ jobs:
           if unzip -l "$APK" | grep -Eq "lib/(x86|x86_64|armeabi-v7a)/"; then echo "Unexpected non-arm64 ABI payload"; exit 1; fi
           if grep -aq "LiquidGlassKt" /tmp/apk/classes*.dex; then echo "Legacy glass code still present"; exit 1; fi
 
+      - name: Verify release signature
+        run: apksigner verify --verbose "$APK"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SwagaBrowser-debug-APK
-          path: android-project/app/build/outputs/apk/debug/*.apk
+          name: SwagaBrowser-release-APK
+          path: android-project/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
           
