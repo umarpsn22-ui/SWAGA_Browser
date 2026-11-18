@@ -34,7 +34,7 @@ tab = tab.replace(
     "import androidx.compose.runtime.setValue\nimport app.swaga.browser.engine.SwagaGeckoTab\n",
 )
 tab = tab.replace("var webView: WebView? = null", "var webView: SwagaGeckoTab? = null\n    var ghostSession: Boolean = false")
-tab = tab.replace("Состояние одной вкладки. WebView существует только у активной вкладки:", "Состояние одной вкладки. GeckoSession существует только у активной вкладки:")
+tab = tab.replace("Состояние одной вкладки. WebView существует только у активной вкладки:", "Состояние одной вкладки. GeckoView существует только у активной вкладки:")
 tab_path.write_text(tab, encoding="utf-8")
 
 # Adapt the existing browser controls to GeckoView.
@@ -68,7 +68,7 @@ vm = vm.replace(
                 clearFormData()
             }
             tab.savedState = null
-        }"""
+        }""",
 )
 vm = vm.replace(
     """        webView.settings.userAgentString = if (tab.desktopMode) {
@@ -79,7 +79,7 @@ vm = vm.replace(
         message = if (tab.desktopMode) "Версия для компьютера включена." else "Мобильная версия включена."
         webView.reload()""",
     """        webView.setDesktopMode(tab.desktopMode)
-        message = if (tab.desktopMode) "Версия для компьютера включена." else "Мобильная версия включена." """
+        message = if (tab.desktopMode) "Версия для компьютера включена." else "Мобильная версия включена." """,
 )
 vm = vm.replace(
     """            // WebView's cookie switch is process-wide. The app has one live WebView at a time.
@@ -95,7 +95,7 @@ vm = vm.replace(
     """            tab.ghostSession = true
             tab.webView?.setPrivateMode(true)
             tab.webView?.clearHistory()
-            tab.savedState = null"""
+            tab.savedState = null""",
 )
 vm = vm.replace(
     """            CookieManager.getInstance().setAcceptCookie(true)
@@ -108,7 +108,7 @@ vm = vm.replace(
     """            tab.ghostSession = false
             tab.webView?.setPrivateMode(false)
             tab.webView?.clearHistory()
-            val returnUrl = restoreUrlAfterGhost"""
+            val returnUrl = restoreUrlAfterGhost""",
 )
 if "CookieManager" in vm or "WebSettings" in vm:
     raise SystemExit("Legacy WebView imports/references remain in BrowserViewModel")
@@ -143,12 +143,27 @@ gradle = re.sub(r'versionCode\s*=\s*\d+', 'versionCode = 3', gradle, count=1)
 gradle = re.sub(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.1.0-gecko"', gradle, count=1)
 gradle_path.write_text(gradle, encoding="utf-8")
 
-# Keep the toolchain on the available Android API 36 platform.
+# Keep Kotlin Android and the Kotlin 2.x Compose compiler plugin on the same version.
 root_gradle_path = root / "build.gradle.kts"
 root_gradle = root_gradle_path.read_text(encoding="utf-8")
-root_gradle = root_gradle.replace('id("com.android.application") version "8.5.2"', 'id("com.android.application") version "8.9.1"')
-root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.android") version "2.0.20"', 'id("org.jetbrains.kotlin.android") version "2.2.20"')
-root_gradle = root_gradle.replace('id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"', 'id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"')
+root_gradle = root_gradle.replace(
+    'id("com.android.application") version "8.5.2"',
+    'id("com.android.application") version "8.9.1"',
+)
+root_gradle = re.sub(
+    r'id\("org\.jetbrains\.kotlin\.android"\)\s+version\s+"[^"]+"',
+    'id("org.jetbrains.kotlin.android") version "2.2.20"',
+    root_gradle,
+    count=1,
+)
+root_gradle = re.sub(
+    r'id\("org\.jetbrains\.kotlin\.plugin\.compose"\)\s+version\s+"[^"]+"',
+    'id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"',
+    root_gradle,
+    count=1,
+)
+if 'id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"' not in root_gradle:
+    raise SystemExit("Could not align Compose compiler plugin with Kotlin 2.2.20")
 root_gradle_path.write_text(root_gradle, encoding="utf-8")
 
 # Ensure the platform WebView and unsupported evaluateJS call are gone.
@@ -161,4 +176,4 @@ if "SwagaGeckoTab" not in active or "org.mozilla.geckoview" not in active:
     raise SystemExit("GeckoView integration did not land")
 if not (extension_target / "manifest.json").exists() or not (extension_target / "bridge.js").exists():
     raise SystemExit("Bundled GeckoView JavaScript bridge was not installed")
-print("GeckoView migration applied: session-scoped WebExtension JavaScript bridge, private sessions, tracking protection, find-in-page, desktop viewport and Mozilla Maven dependency.")
+print("GeckoView migration applied with Kotlin/Compose plugin versions aligned at 2.2.20.")
