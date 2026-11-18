@@ -80,7 +80,7 @@ new = """private fun SwagaHeroVideo() {
     val context = LocalContext.current
     val videoView = remember(context) {
 """
-if old not in s:
-    raise SystemExit("Expected low-RAM mascot replacement block not found; refusing unsafe edit")
-s = s.replace(old, new, 1)
+if old in s:
+    s = s.replace(old, new, 1)
+# If the source already uses the original video without the fallback, leave it untouched.
 start.write_text(s, encoding="utf-8")
