@@ -35,23 +35,21 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           candidates = list(Path("android-project").rglob("*.gradle.kts"))
+          old = 'id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"'
+          new = 'id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"'
           changed = []
-          pattern = re.compile(
-              r'(id\\(["\\']org\\.jetbrains\\.kotlin\\.plugin\\.compose["\\']\\)\\s+version\\s+["\\'])2\\.1\\.20(["\\'])'
-          )
           for path in candidates:
               source = path.read_text(encoding="utf-8")
-              updated, count = pattern.subn(r'\\g<1>2.2.20\\g<2>', source)
+              count = source.count(old)
               if count:
-                  path.write_text(updated, encoding="utf-8")
-                  changed.append(str(path))
+                  path.write_text(source.replace(old, new), encoding="utf-8")
+                  changed.append((str(path), count))
           if not changed:
               raise SystemExit("Compose plugin declaration 2.1.20 was not found; refusing a silent no-op")
-          for path in changed:
-              print(f"Updated Compose plugin to 2.2.20: {path}")
+          for path, count in changed:
+              print(f"Updated {count} Compose plugin declaration(s) in {path}")
           PY
           grep -RIn 'org.jetbrains.kotlin.plugin.compose.*2.2.20' android-project --include='*.gradle.kts'
 
