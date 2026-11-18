@@ -35,30 +35,34 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
-          root = Path("android-project")
           targets = {
-              "org.jetbrains.kotlin.android": 0,
-              "org.jetbrains.kotlin.plugin.compose": 0,
+              'org.jetbrains.kotlin.android': 0,
+              'org.jetbrains.kotlin.plugin.compose': 0,
           }
-          pattern = re.compile(
-              r'(id\\(["\\'](?P<plugin>org\\.jetbrains\\.kotlin\\.(?:android|plugin\\.compose))["\\']\\)\\s+version\\s+["\\'])[^"\\']+(["\\'])'
-          )
-          for path in root.rglob("*.gradle.kts"):
-              source = path.read_text(encoding="utf-8")
-              def replace(match):
-                  plugin = match.group("plugin")
+          for path in Path('android-project').rglob('*.gradle.kts'):
+              lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+              changed = False
+              for index, line in enumerate(lines):
+                  plugin = next((name for name in targets if f'id("{name}")' in line), None)
+                  if plugin is None:
+                      continue
+                  prefix, marker, suffix = line.partition('version "')
+                  if not marker:
+                      continue
+                  _, closing, tail = suffix.partition('"')
+                  if not closing:
+                      raise SystemExit(f'Unclosed plugin version in {path}:{index + 1}')
+                  lines[index] = prefix + marker + '2.2.20' + closing + tail
                   targets[plugin] += 1
-                  return match.group(1) + "2.2.20" + match.group(2)
-              updated = pattern.sub(replace, source)
-              if updated != source:
-                  path.write_text(updated, encoding="utf-8")
-          missing = [plugin for plugin, count in targets.items() if count == 0]
+                  changed = True
+              if changed:
+                  path.write_text(''.join(lines), encoding='utf-8')
+          missing = [name for name, count in targets.items() if count == 0]
           if missing:
-              raise SystemExit("Missing Kotlin plugin declarations: " + ", ".join(missing))
-          for plugin, count in targets.items():
-              print(f"Aligned {plugin} to 2.2.20 ({count} declaration(s))")
+              raise SystemExit('Missing Kotlin plugin declarations: ' + ', '.join(missing))
+          for name, count in targets.items():
+              print(f'Aligned {name} to 2.2.20 ({count} declaration(s))')
           PY
           grep -RInE 'org.jetbrains.kotlin.(android|plugin.compose).*2.2.20' android-project --include='*.gradle.kts'
 
