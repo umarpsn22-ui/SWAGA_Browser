@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # swaga-src.zip now holds the COMPLETE project (real Kotlin sources, resources, Gradle files).
       # Nothing is patched or generated on the fly any more: what is in the zip is what gets compiled.
@@ -69,7 +69,7 @@ jobs:
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: SwagaBrowser-source-snapshot
           path: android-project/
@@ -77,7 +77,7 @@ jobs:
           retention-days: 7
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -123,7 +123,7 @@ jobs:
           "$APKSIGNER" verify --verbose "$APK"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: SwagaBrowser-release-APK
           path: android-project/app/build/outputs/apk/release/*.apk
