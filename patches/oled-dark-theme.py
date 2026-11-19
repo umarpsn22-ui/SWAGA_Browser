@@ -180,6 +180,8 @@ p.write_text(theme.strip() + "\n", encoding="utf-8")
 for rel in ["ui/Sheets.kt", "ui/ProtectionSheet.kt"]:
     p = java / rel
     s = p.read_text(encoding="utf-8")
+    if "import androidx.compose.ui.graphics.Color" not in s:
+        s = s.replace("import androidx.compose.ui.Modifier\n", "import androidx.compose.ui.Modifier\nimport androidx.compose.ui.graphics.Color\n")
     if "import androidx.compose.material3.SwitchDefaults" not in s:
         s = s.replace("import androidx.compose.material3.Switch\n",
                       "import androidx.compose.material3.Switch\nimport androidx.compose.material3.SwitchDefaults\n")
