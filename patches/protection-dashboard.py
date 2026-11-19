@@ -46,12 +46,15 @@ needle = """            created.setContentDelegate(object : GeckoSession.Content
                 }
             })
 """
-if "setTrackingProtectionDelegate" not in s:
+if "setContentBlockingDelegate" not in s:
     if needle not in s:
         raise SystemExit("GeckoSession delegate insertion point not found")
-    s = s.replace(needle, needle + """            created.setTrackingProtectionDelegate(object : GeckoSession.TrackingProtectionDelegate {
-                override fun onTrackerBlocked(session: GeckoSession, uri: String, categories: Int) {
-                    ProtectionStats.record(uri, tab.url)
+    s = s.replace(needle, needle + """            created.setContentBlockingDelegate(object : ContentBlocking.Delegate {
+                override fun onContentBlocked(
+                    session: GeckoSession,
+                    event: ContentBlocking.BlockEvent
+                ) {
+                    ProtectionStats.record(event.uri, tab.url)
                 }
             })
 """, 1)
