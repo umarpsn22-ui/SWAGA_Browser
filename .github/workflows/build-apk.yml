@@ -10,6 +10,7 @@ on:
       - "patches/compact-menu-protection.py"
       - "patches/protection-dashboard.py"
       - "patches/download-manager.py"
+      - "patches/swaga-vpn-foundation.py"
 
 permissions:
   contents: read
@@ -45,6 +46,9 @@ jobs:
 
       - name: Add native download manager and restore full mascot rendering
         run: python3 patches/download-manager.py
+
+      - name: Add browser-scoped Swaga VPN service foundation
+        run: python3 patches/swaga-vpn-foundation.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
