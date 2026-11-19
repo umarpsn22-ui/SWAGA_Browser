@@ -7,7 +7,7 @@ with tarfile.open(fileobj=io.BytesIO(gzip.decompress(payload)), mode="r:") as ar
 base = root / "app/src/main/java/app/swaga/browser"
 engine = base / "engine/SwagaWebView.kt"
 s = engine.read_text()
-s = s.replace("import app.swaga.browser.ProtectionStats\\n", "import app.swaga.browser.ProtectionStats\\nimport app.swaga.browser.DownloadsController\\n")
+s = s.replace("import app.swaga.browser.ProtectionStats\n", "import app.swaga.browser.ProtectionStats\nimport app.swaga.browser.DownloadsController\n")
 needle = """                override fun onTitleChange(session: GeckoSession, title: String?) {
                     if (!title.isNullOrBlank()) tab.title = title
                 }
@@ -23,8 +23,8 @@ if "DownloadsController.accept(context, response)" not in s:
 engine.write_text(s)
 bottom = base / "ui/BottomBar.kt"
 s = bottom.read_text()
-s = s.replace("import app.swaga.browser.BrowserViewModel\\n", "import app.swaga.browser.BrowserViewModel\\nimport app.swaga.browser.DownloadsController\\n")
-s = s.replace("    var showProtection by remember { mutableStateOf(false) }\\n", "    var showProtection by remember { mutableStateOf(false) }\\n    var showDownloads by remember { mutableStateOf(false) }\\n")
+s = s.replace("import app.swaga.browser.BrowserViewModel\n", "import app.swaga.browser.BrowserViewModel\nimport app.swaga.browser.DownloadsController\n")
+s = s.replace("    var showProtection by remember { mutableStateOf(false) }\n", "    var showProtection by remember { mutableStateOf(false) }\n    var showDownloads by remember { mutableStateOf(false) }\n")
 needle = '''                DropdownMenuItem(
                     text = { Text("Найти на странице") },
 '''
@@ -36,7 +36,7 @@ insert = '''                DropdownMenuItem(
 if "text = { Text(\"Загрузки\") }" not in s:
     if needle not in s: raise SystemExit("Downloads menu anchor missing")
     s = s.replace(needle, insert, 1)
-s = s.replace("    if (showProtection) ProtectionSheet(vm = vm, tab = tab, onDismiss = { showProtection = false })\\n", "    if (showProtection) ProtectionSheet(vm = vm, tab = tab, onDismiss = { showProtection = false })\\n    if (showDownloads) DownloadsSheet(onDismiss = { showDownloads = false })\\n")
+s = s.replace("    if (showProtection) ProtectionSheet(vm = vm, tab = tab, onDismiss = { showProtection = false })\n", "    if (showProtection) ProtectionSheet(vm = vm, tab = tab, onDismiss = { showProtection = false })\n    if (showDownloads) DownloadsSheet(onDismiss = { showDownloads = false })\n")
 bottom.write_text(s)
 print("Installed GeckoView download manager sources")
 
@@ -46,18 +46,18 @@ print("Installed GeckoView download manager sources")
 import re
 start_page = base / "ui/StartPage.kt"
 hs = start_page.read_text(encoding="utf-8")
-for line in ["import android.widget.VideoView\\n", "import android.net.Uri\\n"]:
+for line in ["import android.widget.VideoView\n", "import android.net.Uri\n"]:
     hs = hs.replace(line, "")
 for line in [
-    "import android.graphics.SurfaceTexture\\n",
-    "import android.media.MediaPlayer\\n",
-    "import android.view.Surface\\n",
-    "import android.view.TextureView\\n",
-    "import androidx.compose.ui.graphics.toArgb\\n",
+    "import android.graphics.SurfaceTexture\n",
+    "import android.media.MediaPlayer\n",
+    "import android.view.Surface\n",
+    "import android.view.TextureView\n",
+    "import androidx.compose.ui.graphics.toArgb\n",
 ]:
     if line not in hs:
-        hs = hs.replace("package app.swaga.browser.ui\\n", "package app.swaga.browser.ui\\n" + line, 1)
-match = re.search(r"(?m)^@Composable\\s*\\nprivate fun SwagaHeroVideo\\(\\)\\s*\\{", hs)
+        hs = hs.replace("package app.swaga.browser.ui\n", "package app.swaga.browser.ui\n" + line, 1)
+match = re.search(r"(?m)^@Composable\s*\nprivate fun SwagaHeroVideo\(\)\s*\{", hs)
 if not match:
     raise SystemExit("Mascot composable not found after tracker patch")
 brace = hs.index("{", match.start())
