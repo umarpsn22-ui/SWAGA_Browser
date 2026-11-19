@@ -12,6 +12,8 @@ on:
       - "patches/download-manager.py"
       - "patches/download-notification.py"
       - "patches/swaga-vpn-foundation.py"
+      - "patches/wireguard-vpn.py"
+      - "patches/vpn-src/**"
       - "patches/oled-dark-theme.py"
       - "patches/refine-accent-themes.py"
 
@@ -61,6 +63,9 @@ jobs:
 
       - name: Add browser-scoped Swaga VPN service foundation
         run: python3 patches/swaga-vpn-foundation.py android-project
+
+      - name: Integrate real WireGuard tunnel and VPN controls
+        run: python3 patches/wireguard-vpn.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
