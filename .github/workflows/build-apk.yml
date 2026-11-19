@@ -13,6 +13,7 @@ on:
       - "patches/download-notification.py"
       - "patches/swaga-vpn-foundation.py"
       - "patches/oled-dark-theme.py"
+      - "patches/refine-accent-themes.py"
 
 permissions:
   contents: read
@@ -48,6 +49,9 @@ jobs:
 
       - name: Apply OLED dark design system
         run: python3 patches/oled-dark-theme.py android-project
+
+      - name: Refine OLED and light themes with adaptive accent
+        run: python3 patches/refine-accent-themes.py android-project
 
       - name: Add native download manager and restore full mascot rendering
         run: python3 patches/download-manager.py
