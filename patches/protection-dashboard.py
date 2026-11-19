@@ -122,8 +122,8 @@ import kotlinx.coroutines.delay
 fun ProtectionSheet(vm: BrowserViewModel, tab: Tab?, onDismiss: () -> Unit) {
     val c = LocalSwaga.current
     var elapsed by remember(tab?.id, tab?.url) { mutableLongStateOf(0L) }
-    LaunchedEffect(tab?.id, tab?.url) {
-        val start = SystemClock.elapsedRealtime()
+    LaunchedEffect(tab?.id, tab?.url, tab?.pageStartedAtElapsed) {
+        val start = tab?.pageStartedAtElapsed ?: SystemClock.elapsedRealtime()
         while (true) {
             elapsed = ((SystemClock.elapsedRealtime() - start) / 1000L).coerceAtLeast(0L)
             delay(1000L)
