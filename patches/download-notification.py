@@ -79,3 +79,5 @@ private fun DownloadStartedBanner(
 '''
     app.write_text(s, encoding="utf-8")
 print("Download start banner patch applied")
+
+# Included in the release build workflow.
