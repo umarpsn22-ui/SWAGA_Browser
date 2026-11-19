@@ -38,13 +38,28 @@ missing = required.difference(copied)
 if missing:
     raise SystemExit("Missing premium source files: " + ", ".join(sorted(missing)))
 
+# Kotlin compile corrections for expression bodies and the multiline system prompt.
+ai_core = destination / "app/swaga/browser/ai/SwagaAiCore.kt"
+ai_text = ai_core.read_text(encoding="utf-8")
+ai_fixes = [
+    ('private const val SYSTEM_PROMPT = """', 'private val SYSTEM_PROMPT = """'),
+    ("        content.trim()\n    }\n\n    private fun completeGemini", "        return content.trim()\n    }\n\n    private fun completeGemini"),
+    ("        answer\n    }\n\n    suspend fun loadOpenRouterFreeModels", "        return answer\n    }\n\n    suspend fun loadOpenRouterFreeModels"),
+    ("            response\n        } finally", "            return response\n        } finally"),
+]
+for before, after in ai_fixes:
+    if before not in ai_text:
+        raise SystemExit("Expected Swaga_AI Kotlin fix site not found: " + before[:70])
+    ai_text = ai_text.replace(before, after, 1)
+ai_core.write_text(ai_text, encoding="utf-8")
+
 gradle = app / "build.gradle.kts"
-content = gradle.read_text(encoding="utf-8")
-content, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 5", content, count=1)
-content, name_count = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.3.0-vpn-ai"', content, count=1)
+gradle_text = gradle.read_text(encoding="utf-8")
+gradle_text, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 5", gradle_text, count=1)
+gradle_text, name_count = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.3.0-vpn-ai"', gradle_text, count=1)
 if code_count != 1 or name_count != 1:
     raise SystemExit("Could not update the app version safely")
-gradle.write_text(content, encoding="utf-8")
+gradle.write_text(gradle_text, encoding="utf-8")
 
 manifest = app / "src/main/AndroidManifest.xml"
 manifest_text = manifest.read_text(encoding="utf-8")
