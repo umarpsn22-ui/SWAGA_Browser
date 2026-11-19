@@ -293,12 +293,24 @@ if "import android.widget.VideoView\n" not in hs:
 if "import androidx.compose.ui.graphics.toArgb\n" not in hs:
     hs = hs.replace("package app.swaga.browser.ui\n", "package app.swaga.browser.ui\nimport androidx.compose.ui.graphics.toArgb\n", 1)
 hs = hs.replace("import androidx.compose.runtime.DisposableEffect\n", "")
-start_token = "@Suppress(\"NewApi\")\n@Composable\nprivate fun SwagaHeroVideo() {"
-end_token = "\n@Composable\nprivate fun StartAction"
-if start_token not in hs or end_token not in hs:
-    raise SystemExit("Transparent mascot composable replacement points not found")
-start_at = hs.index(start_token)
-end_at = hs.index(end_token, start_at)
+import re as _re
+hero_match = _re.search(r'(?m)^(?:@Suppress\("NewApi"\)\s*\n)?@Composable\s*\nprivate fun SwagaHeroVideo\(\)\s*\{', hs)
+if not hero_match:
+    raise SystemExit("SwagaHeroVideo composable was not found in StartPage.kt")
+start_at = hero_match.start()
+brace_at = hs.index("{", hero_match.start())
+depth = 0
+end_at = None
+for pos in range(brace_at, len(hs)):
+    if hs[pos] == "{":
+        depth += 1
+    elif hs[pos] == "}":
+        depth -= 1
+        if depth == 0:
+            end_at = pos + 1
+            break
+if end_at is None:
+    raise SystemExit("Could not find the end of SwagaHeroVideo composable")
 new_hero = '''@Composable
 private fun SwagaHeroVideo() {
     val c = LocalSwaga.current
