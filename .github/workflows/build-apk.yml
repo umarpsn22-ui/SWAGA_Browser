@@ -14,7 +14,6 @@ on:
       - "patches/swaga-vpn-foundation.py"
       - "patches/wireguard-vpn.py"
       - "patches/vpn-src/**"
-      - "patches/swaga-premium-src.part00"
       - "patches/swaga-premium-payload-*.txt"
       - "patches/swaga-premium-ux.py"
       - "patches/oled-dark-theme.py"
@@ -73,7 +72,9 @@ jobs:
       - name: Add Swaga VPN Control Center and Swaga_AI
         run: |
           set -euo pipefail
-          cat patches/swaga-premium-src.part00 \
+          cat patches/swaga-premium-payload-00a.txt \
+              patches/swaga-premium-payload-00b.txt \
+              patches/swaga-premium-payload-00c.txt \
               patches/swaga-premium-payload-01.txt \
               patches/swaga-premium-payload-02.txt \
               patches/swaga-premium-payload-03.txt \
@@ -85,6 +86,7 @@ jobs:
               patches/swaga-premium-payload-09.txt \
               > patches/swaga-premium-src.tar.xz.b64
           test "$(wc -c < patches/swaga-premium-src.tar.xz.b64)" -eq 28512
+          echo "fc5e60e979c3f97f254747540c74e25f303c3a039845722cfe430c787191214f  patches/swaga-premium-src.tar.xz.b64" | sha256sum --check
           base64 --decode patches/swaga-premium-src.tar.xz.b64 | tar -xJf - -C patches
           python3 patches/swaga-premium-ux.py android-project
 
