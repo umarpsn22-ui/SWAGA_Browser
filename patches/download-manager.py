@@ -110,3 +110,5 @@ private fun SwagaHeroVideo() {
 hs = hs[:match.start()] + hero + hs[end:]
 start_page.write_text(hs, encoding="utf-8")
 print("Restored original mascot video without destructive frame processing")
+
+# Download start banner is applied by patches/download-notification.py.
