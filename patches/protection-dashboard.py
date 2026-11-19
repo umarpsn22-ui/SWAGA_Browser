@@ -40,6 +40,8 @@ engine = base / "engine/SwagaWebView.kt"
 s = engine.read_text(encoding="utf-8")
 if "import app.swaga.browser.ProtectionStats" not in s:
     s = s.replace("import app.swaga.browser.tabs.Tab\n", "import app.swaga.browser.tabs.Tab\nimport app.swaga.browser.ProtectionStats\n")
+if "import org.mozilla.geckoview.ContentBlocking" not in s:
+    s = s.replace("import org.mozilla.geckoview.GeckoSession\n", "import org.mozilla.geckoview.GeckoSession\nimport org.mozilla.geckoview.ContentBlocking\n")
 needle = """            created.setContentDelegate(object : GeckoSession.ContentDelegate {
                 override fun onTitleChange(session: GeckoSession, title: String?) {
                     if (!title.isNullOrBlank()) tab.title = title
