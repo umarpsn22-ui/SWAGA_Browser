@@ -10,6 +10,7 @@ on:
       - "patches/compact-menu-protection.py"
       - "patches/protection-dashboard.py"
       - "patches/download-manager.py"
+      - "patches/download-notification.py"
       - "patches/swaga-vpn-foundation.py"
 
 permissions:
@@ -46,6 +47,9 @@ jobs:
 
       - name: Add native download manager and restore full mascot rendering
         run: python3 patches/download-manager.py
+
+      - name: Add in-browser download start notification
+        run: python3 patches/download-notification.py
 
       - name: Add browser-scoped Swaga VPN service foundation
         run: python3 patches/swaga-vpn-foundation.py android-project
