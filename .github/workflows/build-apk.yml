@@ -37,9 +37,6 @@ jobs:
       - name: Apply minimal dark redesign
         run: python3 patches/apply-minimal-dark.py android-project
 
-      - name: Apply OLED dark design system
-        run: python3 patches/oled-dark-theme.py android-project
-
       - name: Optimize Compose UI for low-memory devices
         run: python3 patches/optimize-low-end-ui.py android-project
 
@@ -48,6 +45,9 @@ jobs:
 
       - name: Add live GeckoView tracker dashboard
         run: python3 patches/protection-dashboard.py android-project
+
+      - name: Apply OLED dark design system
+        run: python3 patches/oled-dark-theme.py android-project
 
       - name: Add native download manager and restore full mascot rendering
         run: python3 patches/download-manager.py
