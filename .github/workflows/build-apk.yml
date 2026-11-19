@@ -14,6 +14,9 @@ on:
       - "patches/swaga-vpn-foundation.py"
       - "patches/wireguard-vpn.py"
       - "patches/vpn-src/**"
+      - "patches/swaga-premium-src.part00"
+      - "patches/swaga-premium-payload-*.txt"
+      - "patches/swaga-premium-ux.py"
       - "patches/oled-dark-theme.py"
       - "patches/refine-accent-themes.py"
 
@@ -67,6 +70,24 @@ jobs:
       - name: Integrate real WireGuard tunnel and VPN controls
         run: python3 patches/wireguard-vpn.py android-project
 
+      - name: Add Swaga VPN Control Center and Swaga_AI
+        run: |
+          set -euo pipefail
+          cat patches/swaga-premium-src.part00 \
+              patches/swaga-premium-payload-01.txt \
+              patches/swaga-premium-payload-02.txt \
+              patches/swaga-premium-payload-03.txt \
+              patches/swaga-premium-payload-04.txt \
+              patches/swaga-premium-payload-05.txt \
+              patches/swaga-premium-payload-06.txt \
+              patches/swaga-premium-payload-07.txt \
+              patches/swaga-premium-payload-08.txt \
+              patches/swaga-premium-payload-09.txt \
+              > patches/swaga-premium-src.tar.xz.b64
+          test "$(wc -c < patches/swaga-premium-src.tar.xz.b64)" -eq 28512
+          base64 --decode patches/swaga-premium-src.tar.xz.b64 | tar -xJf - -C patches
+          python3 patches/swaga-premium-ux.py android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -105,7 +126,7 @@ jobs:
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad Swaga_AI "Swaga VPN"; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
