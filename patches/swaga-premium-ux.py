@@ -40,7 +40,7 @@ if missing:
 
 gradle = app / "build.gradle.kts"
 content = gradle.read_text(encoding="utf-8")
-content, code_count = re.subn(r"versionCode\s*=\s*\\d+", "versionCode = 5", content, count=1)
+content, code_count = re.subn(r"versionCode\s*=\s*\d+", "versionCode = 5", content, count=1)
 content, name_count = re.subn(r'versionName\s*=\s*"[^"]+"', 'versionName = "1.3.0-vpn-ai"', content, count=1)
 if code_count != 1 or name_count != 1:
     raise SystemExit("Could not update the app version safely")
