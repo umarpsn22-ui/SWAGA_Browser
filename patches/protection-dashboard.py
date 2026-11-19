@@ -186,4 +186,23 @@ private fun Metric(label: String, value: String, modifier: Modifier = Modifier) 
 }
 """, encoding="utf-8")
 
+
+# Track the actual page start time reported by GeckoView.
+tabFile = base / "tabs/Tab.kt"
+ts = tabFile.read_text(encoding="utf-8")
+if "mutableLongStateOf" not in ts:
+    ts = ts.replace("import androidx.compose.runtime.mutableIntStateOf\\n", "import androidx.compose.runtime.mutableIntStateOf\\nimport androidx.compose.runtime.mutableLongStateOf\\n")
+if "pageStartedAtElapsed" not in ts:
+    ts = ts.replace("    var progress by mutableIntStateOf(0)\\n", "    var progress by mutableIntStateOf(0)\\n    var pageStartedAtElapsed by mutableLongStateOf(android.os.SystemClock.elapsedRealtime())\\n")
+ts.write_text(ts, encoding="utf-8")
+
+engineFile = base / "engine/SwagaWebView.kt"
+es = engineFile.read_text(encoding="utf-8")
+needle = "                override fun onPageStart(session: GeckoSession, url: String) {\\n                    tab.loading = true"
+if "tab.pageStartedAtElapsed =" not in es:
+    if needle not in es:
+        raise SystemExit("GeckoView page-start hook not found")
+    es = es.replace(needle, "                override fun onPageStart(session: GeckoSession, url: String) {\\n                    tab.pageStartedAtElapsed = android.os.SystemClock.elapsedRealtime()\\n                    tab.loading = true", 1)
+engineFile.write_text(es, encoding="utf-8")
+
 print("Applied SwagaGuard live tracker dashboard")
