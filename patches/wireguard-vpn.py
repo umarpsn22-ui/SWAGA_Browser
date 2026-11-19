@@ -5,7 +5,7 @@ import sys
 
 root = Path(sys.argv[1])
 app = root / "app"
-src = root / "patches/vpn-src"
+src = Path(__file__).resolve().parent / "vpn-src"
 dst = app / "src/main/java/app/swaga/browser/vpn"
 dst.mkdir(parents=True, exist_ok=True)
 for name in ("VpnConfigStore.kt", "SwagaVpnManager.kt", "SwagaVpnSheet.kt", "VpnState.kt"):
