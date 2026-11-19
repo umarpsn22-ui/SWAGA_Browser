@@ -213,299 +213,159 @@ engineFile.write_text(es, encoding="utf-8")
 print("Applied SwagaGuard live tracker dashboard")
 
 
-# ---- Transparent animated mascot and small tab utilities ----
+# ---- Blend the original animated mascot backdrop into the browser theme ----
 import shutil as _shutil
 import subprocess as _subprocess
 import tempfile as _tempfile
-
 import cv2 as _cv2
 import numpy as _np
 
-# Cut the black video backdrop without damaging the dark outline of the nut.
-# The source stays in the repository; CI deterministically regenerates the alpha WebP.
 hero_video = root / "app/src/main/res/raw/swaga_hero.mp4"
-hero_output = root / "app/src/main/res/raw/swaga_hero_transparent.webp"
 if not hero_video.exists():
     raise SystemExit("Mascot source video not found: " + str(hero_video))
 ffmpeg = _shutil.which("ffmpeg")
 if not ffmpeg:
-    raise SystemExit("ffmpeg is required to encode the transparent animated mascot")
+    raise SystemExit("ffmpeg is required to blend the mascot backdrop")
 
 capture = _cv2.VideoCapture(str(hero_video))
 fps = capture.get(_cv2.CAP_PROP_FPS)
 if not fps or fps < 1:
     fps = 10.0
 frame_index = 0
-with _tempfile.TemporaryDirectory(prefix="swaga-mascot-") as temp_name:
+target_bgr = _np.array([18, 13, 11], dtype=_np.uint8)  # #0B0D12
+with _tempfile.TemporaryDirectory(prefix="swaga-mascot-bg-") as temp_name:
     frame_dir = Path(temp_name)
     try:
         while True:
-            ok, bgr = capture.read()
+            ok, frame = capture.read()
             if not ok:
                 break
-            rgb = _cv2.cvtColor(bgr, _cv2.COLOR_BGR2RGB)
-            candidate = (_np.max(rgb, axis=2) > 125).astype(_np.uint8)
-            close_kernel = _cv2.getStructuringElement(_cv2.MORPH_ELLIPSE, (3, 3))
-            candidate = _cv2.morphologyEx(
-                candidate, _cv2.MORPH_CLOSE, close_kernel, iterations=2
-            )
-            count, labels, stats, _ = _cv2.connectedComponentsWithStats(candidate, 8)
-            if count <= 1:
-                raise SystemExit("Could not isolate mascot in video frame " + str(frame_index))
-            largest = 1 + int(_np.argmax(stats[1:, _cv2.CC_STAT_AREA]))
-            mask = (labels == largest).astype(_np.uint8)
-            outline_kernel = _cv2.getStructuringElement(_cv2.MORPH_ELLIPSE, (5, 5))
-            mask = _cv2.dilate(mask, outline_kernel, iterations=1)
-            alpha = _cv2.GaussianBlur(mask.astype(_np.float32), (0, 0), 0.8)
-            alpha = _np.uint8(_np.clip(alpha, 0.0, 1.0) * 255.0)
-            rgba = _np.dstack((rgb, alpha))
-            bgra = _cv2.cvtColor(rgba, _cv2.COLOR_RGBA2BGRA)
-            frame_path = frame_dir / ("frame_%03d.png" % frame_index)
-            if not _cv2.imwrite(str(frame_path), bgra):
-                raise SystemExit("Could not write transparent mascot frame " + str(frame_index))
+            dark = (_np.max(frame, axis=2) < 34).astype(_np.uint8)
+            count, labels, stats, _ = _cv2.connectedComponentsWithStats(dark, 8)
+            edge_labels = set()
+            if count > 1:
+                edge_labels.update(_np.unique(labels[0, :]).tolist())
+                edge_labels.update(_np.unique(labels[-1, :]).tolist())
+                edge_labels.update(_np.unique(labels[:, 0]).tolist())
+                edge_labels.update(_np.unique(labels[:, -1]).tolist())
+            background_mask = _np.isin(labels, list(edge_labels))
+            background_mask &= dark.astype(bool)
+            frame[background_mask] = target_bgr
+            frame_path = frame_dir / ("frame_%05d.png" % frame_index)
+            if not _cv2.imwrite(str(frame_path), frame):
+                raise SystemExit("Could not write mascot frame " + str(frame_index))
             frame_index += 1
     finally:
         capture.release()
 
     if frame_index < 2:
-        raise SystemExit("Mascot video did not contain enough frames to animate")
-    hero_output.parent.mkdir(parents=True, exist_ok=True)
+        raise SystemExit("Mascot video did not contain enough frames")
+    blended_video = frame_dir / "swaga_hero_blended.mp4"
     _subprocess.run(
         [
             ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
             "-framerate", ("%.3f" % fps),
-            "-i", str(frame_dir / "frame_%03d.png"),
-            "-vf", "scale=96:96:flags=lanczos",
-            "-loop", "0", "-c:v", "libwebp_anim", "-lossless", "0",
-            "-q:v", "75", "-compression_level", "6", "-an",
-            str(hero_output),
+            "-i", str(frame_dir / "frame_%05d.png"),
+            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+            "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+            str(blended_video),
         ],
         check=True,
     )
-print("Created transparent animated mascot (%d frames, %d bytes)" % (
-    frame_index, hero_output.stat().st_size
-))
+    _shutil.copy2(blended_video, hero_video)
 
-# Replace the opaque VideoView/card with the alpha-capable animated WebP.
 start_page = base / "ui/StartPage.kt"
 hs = start_page.read_text(encoding="utf-8")
-hs = hs.replace("import android.net.Uri\n", "")
-hs = hs.replace("import android.widget.VideoView\n", "")
-new_imports = [
-    "import android.graphics.BitmapFactory",
-    "import android.graphics.ImageDecoder",
-    "import android.graphics.drawable.AnimatedImageDrawable",
-    "import android.graphics.drawable.BitmapDrawable",
-    "import android.graphics.drawable.Drawable",
-    "import android.os.Build",
-    "import android.widget.ImageView",
-]
-for line in new_imports:
-    if line not in hs:
-        hs = hs.replace(
-            "package app.swaga.browser.ui\n",
-            "package app.swaga.browser.ui\n" + line + "\n",
-            1,
-        )
-start_token = "@Composable\nprivate fun SwagaHeroVideo() {"
+for line in [
+    "import android.widget.ImageView\n",
+    "import android.os.Build\n",
+    "import android.graphics.drawable.Drawable\n",
+    "import android.graphics.drawable.BitmapDrawable\n",
+    "import android.graphics.drawable.AnimatedImageDrawable\n",
+    "import android.graphics.ImageDecoder\n",
+    "import android.graphics.BitmapFactory\n",
+]:
+    hs = hs.replace(line, "")
+if "import android.net.Uri\n" not in hs:
+    hs = hs.replace("package app.swaga.browser.ui\n", "package app.swaga.browser.ui\nimport android.net.Uri\n", 1)
+if "import android.widget.VideoView\n" not in hs:
+    hs = hs.replace("package app.swaga.browser.ui\n", "package app.swaga.browser.ui\nimport android.widget.VideoView\n", 1)
+if "import androidx.compose.ui.graphics.toArgb\n" not in hs:
+    hs = hs.replace("package app.swaga.browser.ui\n", "package app.swaga.browser.ui\nimport androidx.compose.ui.graphics.toArgb\n", 1)
+hs = hs.replace("import androidx.compose.runtime.DisposableEffect\n", "")
+start_token = "@Suppress(\"NewApi\")\n@Composable\nprivate fun SwagaHeroVideo() {"
 end_token = "\n@Composable\nprivate fun StartAction"
 if start_token not in hs or end_token not in hs:
-    raise SystemExit("SwagaHeroVideo replacement points not found")
+    raise SystemExit("Transparent mascot composable replacement points not found")
 start_at = hs.index(start_token)
 end_at = hs.index(end_token, start_at)
-new_hero = '''@Suppress("NewApi")
-@Composable
+new_hero = '''@Composable
 private fun SwagaHeroVideo() {
-    val context = LocalContext.current
-    val mascot: Drawable = remember(context) {
-        val animated = if (Build.VERSION.SDK_INT >= 28) {
-            runCatching {
-                ImageDecoder.decodeDrawable(
-                    ImageDecoder.createSource(
-                        context.resources,
-                        R.raw.swaga_hero_transparent,
-                    ),
-                )
-            }.getOrNull() as? AnimatedImageDrawable
-        } else {
-            null
-        }
-        animated?.apply {
-            repeatCount = AnimatedImageDrawable.REPEAT_INFINITE
-        } ?: BitmapDrawable(
-            context.resources,
-            BitmapFactory.decodeResource(context.resources, R.raw.swaga_hero_transparent),
-        )
-    }
-
-    DisposableEffect(mascot) {
-        (mascot as? AnimatedImageDrawable)?.start()
-        onDispose { (mascot as? AnimatedImageDrawable)?.stop() }
-    }
-
+    val c = LocalSwaga.current
     AndroidView(
         factory = { viewContext ->
-            ImageView(viewContext).apply {
-                scaleType = ImageView.ScaleType.FIT_CENTER
-                background = null
-                setImageDrawable(mascot)
-                contentDescription = "Анимированный орех Swaga"
+            VideoView(viewContext).apply {
+                setBackgroundColor(c.bg.toArgb())
+                setVideoURI(Uri.parse("android.resource://" + viewContext.packageName + "/" + R.raw.swaga_hero))
+                setOnPreparedListener { player ->
+                    player.isLooping = true
+                    player.setVolume(0f, 0f)
+                    start()
+                }
+                setOnErrorListener { _, _, _ -> true }
             }
         },
-        update = { imageView ->
-            if (imageView.drawable !== mascot) imageView.setImageDrawable(mascot)
-            (mascot as? AnimatedImageDrawable)?.let {
-                if (!it.isRunning) it.start()
-            }
+        update = { videoView ->
+            videoView.setBackgroundColor(c.bg.toArgb())
+            if (!videoView.isPlaying) videoView.start()
         },
-        modifier = Modifier.size(56.dp),
+        modifier = Modifier.size(width = 92.dp, height = 92.dp),
     )
 }
 '''
 hs = hs[:start_at] + new_hero + hs[end_at:]
 start_page.write_text(hs, encoding="utf-8")
 
-# Duplicate the current normal tab and close every non-active tab from the tab switcher.
-vm_file = base / "BrowserViewModel.kt"
-vs = vm_file.read_text(encoding="utf-8")
-if "fun duplicateTab(" not in vs:
-    anchor = "    fun restoreClosedTab() {\n"
-    addition = '''    fun duplicateTab(source: Tab? = activeTab) {
-        if (ghostModeEnabled) return
-        val current = source ?: return
-        val url = current.url
-        if (url.isNullOrBlank()) {
-            message = "Нет страницы для дублирования."
-            return
-        }
-        val duplicate = newTab(url)
-        duplicate.desktopMode = current.desktopMode
-        duplicate.textZoom = current.textZoom
-        message = "Вкладка продублирована."
-    }
-
-    fun closeOtherTabs() {
-        if (ghostModeEnabled) return
-        val keep = activeTab ?: return
-        val others = tabs.toList().filter { it.id != keep.id }
-        if (others.isEmpty()) {
-            message = "Других вкладок нет."
-            return
-        }
-        others.forEach { closeTab(it) }
-        activeTabId = keep.id
-        persist()
-        message = "Закрыто вкладок: " + others.size
-    }
-
-'''
-    if anchor not in vs:
-        raise SystemExit("BrowserViewModel restoreClosedTab insertion point not found")
-    vs = vs.replace(anchor, addition + anchor, 1)
-vm_file.write_text(vs, encoding="utf-8")
-
-# Add one-tap duplicate, title/address copy, and local page-text copy actions.
 bottom_file = base / "ui/BottomBar.kt"
 bs = bottom_file.read_text(encoding="utf-8")
-bookmark_anchor = '''                if (!vm.ghostModeEnabled) {
-                    DropdownMenuItem(
-                        text = { Text(if (vm.isBookmarked(tab?.url)) "Убрать из закладок" else "Добавить в закладки") },
-'''
-if "Дублировать вкладку" not in bs:
-    if bookmark_anchor not in bs:
-        raise SystemExit("BottomBar bookmark menu insertion point not found")
-    duplicate_item = '''                DropdownMenuItem(
-                    text = { Text("Дублировать вкладку") },
-                    enabled = onPage && !vm.ghostModeEnabled,
-                    onClick = { menu = false; vm.duplicateTab(tab) },
-                )
-'''
-    bs = bs.replace(bookmark_anchor, duplicate_item + bookmark_anchor, 1)
-
-copy_address_anchor = '''                DropdownMenuItem(
-                    text = { Text("Ярлык на главный экран") },
-'''
-if "Копировать заголовок и адрес" not in bs:
-    if copy_address_anchor not in bs:
-        raise SystemExit("BottomBar shortcut menu insertion point not found")
-    copy_items = '''                DropdownMenuItem(
+if "Копировать ссылку без трекеров" not in bs:
+    anchor = '''                DropdownMenuItem(
                     text = { Text("Копировать заголовок и адрес") },
-                    enabled = onPage,
+'''
+    if anchor not in bs:
+        raise SystemExit("Clean-link menu insertion point not found")
+    clean_item = '''                DropdownMenuItem(
+                    text = { Text("Копировать ссылку без трекеров") },
+                    enabled = onPage && !tab?.url.isNullOrBlank(),
                     onClick = {
                         menu = false
-                        val current = tab
-                        val url = current?.url
-                        if (current != null && !url.isNullOrBlank()) {
-                            val title = current.title.ifBlank { Uri.parse(url).host ?: "Страница" }
-                            val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Страница", "$title\\\\n$url"))
-                            vm.message = "Заголовок и адрес скопированы."
-                        }
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text("Копировать текст страницы") },
-                    enabled = onPage,
-                    onClick = {
-                        menu = false
-                        val current = tab
-                        val target = current?.webView
-                        if (target == null) {
-                            vm.message = "Страница ещё загружается."
-                        } else {
-                            target.evaluateJavascript(
-                                "(document.body?.innerText || document.documentElement?.innerText || '').slice(0, 30000)"
-                            ) { raw ->
-                                val pageText = runCatching {
-                                    org.json.JSONTokener(raw ?: "null").nextValue() as? String
-                                }.getOrNull()?.trim().orEmpty()
-                                if (pageText.isBlank()) {
-                                    vm.message = "На странице не найден доступный текст."
-                                } else {
-                                    val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Текст страницы", pageText))
-                                    vm.message = if (pageText.length >= 30000) {
-                                        "Скопированы первые 30 000 символов страницы."
-                                    } else {
-                                        "Текст страницы скопирован."
+                        val original = tab?.url
+                        if (!original.isNullOrBlank()) {
+                            val parsed = Uri.parse(original)
+                            val clean = parsed.buildUpon().clearQuery().apply {
+                                parsed.queryParameterNames.forEach { key ->
+                                    val lower = key.lowercase()
+                                    val tracking = lower.startsWith("utm_") ||
+                                        lower in setOf("fbclid", "gclid", "dclid", "msclkid", "igshid", "mc_cid", "mc_eid", "ref_src")
+                                    if (!tracking) {
+                                        parsed.getQueryParameters(key).forEach { value ->
+                                            appendQueryParameter(key, value)
+                                        }
                                     }
                                 }
+                            }.build().toString()
+                            val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Чистая ссылка", clean))
+                            vm.message = if (clean == original) {
+                                "Метки отслеживания не найдены."
+                            } else {
+                                "Ссылка без распространённых меток скопирована."
                             }
                         }
                     },
                 )
 '''
-    bs = bs.replace(copy_address_anchor, copy_items + copy_address_anchor, 1)
-
-# Share title together with the page URL.
-bs = bs.replace(
-    'putExtra(Intent.EXTRA_TEXT, url)',
-    'putExtra(Intent.EXTRA_TEXT, (tab?.title?.takeIf { it.isNotBlank() } ?: Uri.parse(url).host ?: "Страница") + "\\\\n" + url)',
-)
+    bs = bs.replace(anchor, clean_item + anchor, 1)
 bottom_file.write_text(bs, encoding="utf-8")
 
-# Put the close-others action in the tab overview. Closed tabs remain restorable.
-switcher_file = base / "ui/TabSwitcher.kt"
-ts = switcher_file.read_text(encoding="utf-8")
-restore_anchor = '''            if (vm.closedTabs.isNotEmpty()) {
-                TextButton(onClick = { vm.restoreClosedTab(); onClose() }) {
-                    Text("Вернуть закрытую", color = c.accent)
-                }
-            }
-'''
-if "Закрыть другие" not in ts:
-    if restore_anchor not in ts:
-        raise SystemExit("TabSwitcher restore button insertion point not found")
-    ts = ts.replace(
-        restore_anchor,
-        restore_anchor + '''            if (vm.tabs.size > 1) {
-                TextButton(onClick = { vm.closeOtherTabs() }) {
-                    Text("Закрыть другие", color = c.accent)
-                }
-            }
-''',
-        1,
-    )
-switcher_file.write_text(ts, encoding="utf-8")
-
-print("Added tab duplication, page-text copy, title/address copy, and close-other-tabs")
+print("Restored full mascot video with theme-matched backdrop and added clean-link copy")
