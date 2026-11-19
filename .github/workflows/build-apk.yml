@@ -9,6 +9,7 @@ on:
       - "patches/optimize-low-end-ui.py"
       - "patches/compact-menu-protection.py"
       - "patches/protection-dashboard.py"
+      - "patches/download-manager.py"
 
 permissions:
   contents: read
@@ -39,14 +40,11 @@ jobs:
       - name: Compact browser menu and configure protection UI
         run: python3 patches/compact-menu-protection.py android-project
 
-      - name: Install image processing tools for the transparent mascot
-        run: |
-          python3 -m pip install --disable-pip-version-check opencv-python-headless
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y ffmpeg
-
       - name: Add live GeckoView tracker dashboard
         run: python3 patches/protection-dashboard.py android-project
+
+      - name: Add native download manager and restore full mascot rendering
+        run: python3 patches/download-manager.py
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
