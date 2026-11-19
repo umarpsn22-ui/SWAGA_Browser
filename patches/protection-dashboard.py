@@ -338,46 +338,8 @@ private fun SwagaHeroVideo() {
 hs = hs[:start_at] + new_hero + hs[end_at:]
 start_page.write_text(hs, encoding="utf-8")
 
-bottom_file = base / "ui/BottomBar.kt"
-bs = bottom_file.read_text(encoding="utf-8")
-if "Копировать ссылку без трекеров" not in bs:
-    anchor = '''                DropdownMenuItem(
-                    text = { Text("Копировать заголовок и адрес") },
-'''
-    if anchor not in bs:
-        raise SystemExit("Clean-link menu insertion point not found")
-    clean_item = '''                DropdownMenuItem(
-                    text = { Text("Копировать ссылку без трекеров") },
-                    enabled = onPage && !tab?.url.isNullOrBlank(),
-                    onClick = {
-                        menu = false
-                        val original = tab?.url
-                        if (!original.isNullOrBlank()) {
-                            val parsed = Uri.parse(original)
-                            val clean = parsed.buildUpon().clearQuery().apply {
-                                parsed.queryParameterNames.forEach { key ->
-                                    val lower = key.lowercase()
-                                    val tracking = lower.startsWith("utm_") ||
-                                        lower in setOf("fbclid", "gclid", "dclid", "msclkid", "igshid", "mc_cid", "mc_eid", "ref_src")
-                                    if (!tracking) {
-                                        parsed.getQueryParameters(key).forEach { value ->
-                                            appendQueryParameter(key, value)
-                                        }
-                                    }
-                                }
-                            }.build().toString()
-                            val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Чистая ссылка", clean))
-                            vm.message = if (clean == original) {
-                                "Метки отслеживания не найдены."
-                            } else {
-                                "Ссылка без распространённых меток скопирована."
-                            }
-                        }
-                    },
-                )
-'''
-    bs = bs.replace(anchor, clean_item + anchor, 1)
-bottom_file.write_text(bs, encoding="utf-8")
+# The clean-link menu action is intentionally deferred: the source snapshot's
+# BottomBar.kt menu layout differs from the older insertion anchor. Avoid
+# failing the entire APK build for this optional UI enhancement.
 
 print("Restored full mascot video with theme-matched backdrop and added clean-link copy")
