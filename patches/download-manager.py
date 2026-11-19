@@ -78,7 +78,6 @@ private fun SwagaHeroVideo() {
     AndroidView(
         factory = { viewContext ->
             TextureView(viewContext).apply {
-                setBackgroundColor(c.bg.toArgb())
                 surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                     private var player: MediaPlayer? = null
                     override fun onSurfaceTextureAvailable(surfaceTexture: android.graphics.SurfaceTexture, width: Int, height: Int) {
@@ -105,7 +104,6 @@ private fun SwagaHeroVideo() {
                 }
             }
         },
-        update = { it.setBackgroundColor(c.bg.toArgb()) },
         modifier = Modifier.size(112.dp),
     )
 }"""
