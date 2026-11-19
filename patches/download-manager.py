@@ -39,3 +39,76 @@ if "text = { Text(\"Загрузки\") }" not in s:
 s = s.replace("    if (showProtection) ProtectionSheet(vm = vm, tab = tab, onDismiss = { showProtection = false })\\n", "    if (showProtection) ProtectionSheet(vm = vm, tab = tab, onDismiss = { showProtection = false })\\n    if (showDownloads) DownloadsSheet(onDismiss = { showDownloads = false })\\n")
 bottom.write_text(s)
 print("Installed GeckoView download manager sources")
+
+
+# Use a TextureView-backed MediaPlayer: unlike VideoView's SurfaceView, it stays
+# correctly composed inside the small animated mascot slot.
+import re
+start_page = base / "ui/StartPage.kt"
+hs = start_page.read_text(encoding="utf-8")
+for line in ["import android.widget.VideoView\\n", "import android.net.Uri\\n"]:
+    hs = hs.replace(line, "")
+for line in [
+    "import android.graphics.SurfaceTexture\\n",
+    "import android.media.MediaPlayer\\n",
+    "import android.view.Surface\\n",
+    "import android.view.TextureView\\n",
+    "import androidx.compose.ui.graphics.toArgb\\n",
+]:
+    if line not in hs:
+        hs = hs.replace("package app.swaga.browser.ui\\n", "package app.swaga.browser.ui\\n" + line, 1)
+match = re.search(r"(?m)^@Composable\\s*\\nprivate fun SwagaHeroVideo\\(\\)\\s*\\{", hs)
+if not match:
+    raise SystemExit("Mascot composable not found after tracker patch")
+brace = hs.index("{", match.start())
+depth = 0
+end = None
+for i in range(brace, len(hs)):
+    if hs[i] == "{": depth += 1
+    elif hs[i] == "}":
+        depth -= 1
+        if depth == 0:
+            end = i + 1
+            break
+if end is None:
+    raise SystemExit("Mascot composable braces are unbalanced")
+hero = """@Composable
+private fun SwagaHeroVideo() {
+    val c = LocalSwaga.current
+    AndroidView(
+        factory = { viewContext ->
+            TextureView(viewContext).apply {
+                setBackgroundColor(c.bg.toArgb())
+                surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                    private var player: MediaPlayer? = null
+                    override fun onSurfaceTextureAvailable(surfaceTexture: android.graphics.SurfaceTexture, width: Int, height: Int) {
+                        runCatching {
+                            MediaPlayer().also { media ->
+                                player = media
+                                media.setDataSource(viewContext, android.net.Uri.parse("android.resource://" + viewContext.packageName + "/" + R.raw.swaga_hero))
+                                media.setSurface(Surface(surfaceTexture))
+                                media.isLooping = true
+                                media.setVolume(0f, 0f)
+                                media.setOnPreparedListener { it.start() }
+                                media.setOnErrorListener { _, _, _ -> true }
+                                media.prepareAsync()
+                            }
+                        }
+                    }
+                    override fun onSurfaceTextureSizeChanged(surface: android.graphics.SurfaceTexture, width: Int, height: Int) = Unit
+                    override fun onSurfaceTextureUpdated(surface: android.graphics.SurfaceTexture) = Unit
+                    override fun onSurfaceTextureDestroyed(surface: android.graphics.SurfaceTexture): Boolean {
+                        runCatching { player?.stop(); player?.release() }
+                        player = null
+                        return true
+                    }
+                }
+            }
+        },
+        update = { it.setBackgroundColor(c.bg.toArgb()) },
+        modifier = Modifier.size(112.dp),
+    )
+}"""
+hs = hs[:match.start()] + hero + hs[end:]
+start_page.write_text(hs, encoding="utf-8")
+print("Restored original mascot video without destructive frame processing")
