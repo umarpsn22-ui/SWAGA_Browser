@@ -12,6 +12,7 @@ on:
       - "patches/download-manager.py"
       - "patches/download-notification.py"
       - "patches/swaga-vpn-foundation.py"
+      - "patches/oled-dark-theme.py"
 
 permissions:
   contents: read
@@ -35,6 +36,9 @@ jobs:
 
       - name: Apply minimal dark redesign
         run: python3 patches/apply-minimal-dark.py android-project
+
+      - name: Apply OLED dark design system
+        run: python3 patches/oled-dark-theme.py android-project
 
       - name: Optimize Compose UI for low-memory devices
         run: python3 patches/optimize-low-end-ui.py android-project
