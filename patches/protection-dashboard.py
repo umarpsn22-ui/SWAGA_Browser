@@ -194,7 +194,7 @@ if "mutableLongStateOf" not in ts:
     ts = ts.replace("import androidx.compose.runtime.mutableIntStateOf\n", "import androidx.compose.runtime.mutableIntStateOf\nimport androidx.compose.runtime.mutableLongStateOf\n")
 if "pageStartedAtElapsed" not in ts:
     ts = ts.replace("    var progress by mutableIntStateOf(0)\n", "    var progress by mutableIntStateOf(0)\n    var pageStartedAtElapsed by mutableLongStateOf(android.os.SystemClock.elapsedRealtime())\n")
-ts.write_text(ts, encoding="utf-8")
+tabFile.write_text(ts, encoding="utf-8")
 
 engineFile = base / "engine/SwagaWebView.kt"
 es = engineFile.read_text(encoding="utf-8")
