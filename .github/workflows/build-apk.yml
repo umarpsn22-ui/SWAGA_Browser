@@ -91,7 +91,7 @@ jobs:
           base64 --decode patches/swaga-premium-src.tar.xz.b64 | tar -xJf - -C patches
           python3 patches/swaga-premium-ux.py android-project
 
-      - name: Integrate Swaga Companion, Streaks, MD3 Loader and Media Hub
+      - name: Build Swaga Companion, Streaks, MD3 Loader and Media Hub
         run: |
           set -euo pipefail
           base64 --decode patches/browser-companion.py.gz.b64 | gzip -dc > patches/browser-companion.py
