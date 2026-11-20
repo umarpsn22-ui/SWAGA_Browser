@@ -21,6 +21,7 @@ on:
       - "patches/browser-companion.py.gz.b64"
       - "patches/companion-compile-fixes.py"
       - "patches/companion-method-name-fixes.py"
+      - "patches/swaga-011-beta-*.txt"
 
 permissions:
   contents: read
@@ -93,13 +94,22 @@ jobs:
           base64 --decode patches/swaga-premium-src.tar.xz.b64 | tar -xJf - -C patches
           python3 patches/swaga-premium-ux.py android-project
 
-      - name: Build Swaga Companion, Streaks, MD3 Loader and Media Hub
+      - name: Build SwagaBrowser 0.1.1 beta plugins, Music and AI history
         run: |
           set -euo pipefail
           base64 --decode patches/browser-companion.py.gz.b64 | gzip -dc > patches/browser-companion.py
           python3 patches/browser-companion.py android-project
           python3 patches/companion-compile-fixes.py android-project
           python3 patches/companion-method-name-fixes.py android-project
+
+      - name: Apply SwagaBrowser 0.1.1 beta update
+        run: |
+          set -euo pipefail
+          cat patches/swaga-011-beta-00.txt patches/swaga-011-beta-01.txt patches/swaga-011-beta-02.txt > /tmp/swaga-011-beta.patch.xz.b64
+          test "$(wc -c < /tmp/swaga-011-beta.patch.xz.b64)" -eq 26464
+          echo "ccb2297b1a90b7ca26615b6e74368bdec2f2988b1c466c54c402924794751014  /tmp/swaga-011-beta.patch.xz.b64" | sha256sum --check
+          base64 --decode /tmp/swaga-011-beta.patch.xz.b64 | xz -dc | patch -p1 -d android-project
+          rm -f android-project/app/src/main/java/app/swaga/browser/ui/SwagaCompanionUi.kt
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
@@ -139,9 +149,11 @@ jobs:
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" SwagaCompanionSheet BrowserMediaController Md3DownloadIndicator; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController Md3DownloadIndicator MusicLibrarySheet SwagaMusicPlayer AiChatStore PluginSettingsSheet LauncherShortcutSheet; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
+          if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
+          grep -aq "0.1.1-beta" /tmp/apk/classes*.dex || true
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
           unzip -l "$APK" | grep -q "libxul.so" && echo "OK   GeckoView engine packaged"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libxul.so" && echo "OK   arm64 GeckoView packaged"
