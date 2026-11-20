@@ -22,6 +22,7 @@ on:
       - "patches/companion-compile-fixes.py"
       - "patches/companion-method-name-fixes.py"
       - "patches/swaga-011-beta-*.txt"
+      - "patches/swaga-011-setter-fix.py"
 
 permissions:
   contents: read
@@ -110,6 +111,9 @@ jobs:
           echo "ccb2297b1a90b7ca26615b6e74368bdec2f2988b1c466c54c402924794751014  /tmp/swaga-011-beta.patch.xz.b64" | sha256sum --check
           base64 --decode /tmp/swaga-011-beta.patch.xz.b64 | xz -dc | patch -p1 -d android-project
           rm -f android-project/app/src/main/java/app/swaga/browser/ui/SwagaCompanionUi.kt
+
+      - name: Resolve legacy preference setter clashes
+        run: python3 patches/swaga-011-setter-fix.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
