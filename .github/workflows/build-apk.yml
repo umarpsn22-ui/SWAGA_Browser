@@ -18,6 +18,7 @@ on:
       - "patches/swaga-premium-ux.py"
       - "patches/oled-dark-theme.py"
       - "patches/refine-accent-themes.py"
+      - "patches/browser-companion.py.gz.b64"
 
 permissions:
   contents: read
@@ -90,6 +91,12 @@ jobs:
           base64 --decode patches/swaga-premium-src.tar.xz.b64 | tar -xJf - -C patches
           python3 patches/swaga-premium-ux.py android-project
 
+      - name: Integrate Swaga Companion, Streaks, MD3 Loader and Media Hub
+        run: |
+          set -euo pipefail
+          base64 --decode patches/browser-companion.py.gz.b64 | gzip -dc > patches/browser-companion.py
+          python3 patches/browser-companion.py android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -128,7 +135,7 @@ jobs:
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad Swaga_AI "Swaga VPN"; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" SwagaCompanionSheet BrowserMediaController Md3DownloadIndicator; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
