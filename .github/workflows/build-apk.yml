@@ -28,6 +28,7 @@ on:
       - "patches/swaga-013-remove-music-fix-vpn.py"
       - "patches/swaga-014-browser-widgets.py.gz.b64"
       - "patches/swaga-014-extra-widgets.py"
+      - "patches/swaga-015-upgrade.py.gz.b64"
 
 permissions:
   contents: read
@@ -137,6 +138,12 @@ jobs:
           python3 patches/swaga-014-browser-widgets.py android-project
           python3 patches/swaga-014-extra-widgets.py android-project
 
+      - name: Upgrade Swaga AI, text animation and premium widgets
+        run: |
+          set -euo pipefail
+          base64 --decode patches/swaga-015-upgrade.py.gz.b64 | gzip -dc > patches/swaga-015-upgrade.py
+          python3 patches/swaga-015-upgrade.py android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -164,15 +171,35 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build release APK
+      - name: Prepare persistent release signing key
+        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
+        env:
+          SWAGA_KEYSTORE_BASE64: ${{ secrets.SWAGA_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$SWAGA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/swaga-release.jks"
+          test -s "$RUNNER_TEMP/swaga-release.jks"
+
+      - name: Build signed release APK
+        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
         working-directory: android-project
+        env:
+          SWAGA_KEYSTORE_PATH: ${{ runner.temp }}/swaga-release.jks
+          SWAGA_KEYSTORE_PASSWORD: ${{ secrets.SWAGA_KEYSTORE_PASSWORD }}
+          SWAGA_KEY_ALIAS: ${{ secrets.SWAGA_KEY_ALIAS }}
+          SWAGA_KEY_PASSWORD: ${{ secrets.SWAGA_KEY_PASSWORD }}
         run: gradle --no-daemon assembleRelease
+
+      - name: Compile debug APK only (release key not configured)
+        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 == '' }}
+        working-directory: android-project
+        run: gradle --no-daemon assembleDebug
 
       # Proves the new code really ended up in the APK (not only in the sources).
       - name: Verify APK contents
         run: |
           set -euo pipefail
-          APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
+          APK="$(find android-project/app/build/outputs/apk -name "*.apk" -type f | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
           for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget; do
@@ -181,14 +208,15 @@ jobs:
           if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
           for sym in setWholeDevice wholeDevice whole_device; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Whole-device VPN symbol remains: $sym"; exit 1; fi; done
           for sym in SwagaMusicPlayer MusicLibrarySheet SwagaPlaybackService SwagaMiniPlayerKt; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Removed music player symbol remains: $sym"; exit 1; fi; done
-          grep -aq "0.1.2-beta" /tmp/apk/classes*.dex || true
+          grep -aq "requestWithRetry" /tmp/apk/classes*.dex
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
           unzip -l "$APK" | grep -q "libxul.so" && echo "OK   GeckoView engine packaged"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libxul.so" && echo "OK   arm64 GeckoView packaged"
           if unzip -l "$APK" | grep -Eq "lib/(x86|x86_64|armeabi-v7a)/"; then echo "Unexpected non-arm64 ABI payload"; exit 1; fi
           if grep -aq "LiquidGlassKt" /tmp/apk/classes*.dex; then echo "Legacy glass code still present"; exit 1; fi
 
-      - name: Verify release signature
+      - name: Verify persistent release signature
+        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
         run: |
           set -euo pipefail
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
@@ -196,11 +224,20 @@ jobs:
           test -x "$APKSIGNER"
           "$APKSIGNER" verify --verbose "$APK"
 
-      - name: Upload APK
+      - name: Upload signed release APK
+        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v5
         with:
           name: SwagaBrowser-release-APK
           path: android-project/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
-          
+
+      - name: Upload compile-check APK (not an update package)
+        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 == '' }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: SwagaBrowser-debug-compile-check
+          path: android-project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 3
