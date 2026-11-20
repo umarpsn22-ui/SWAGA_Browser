@@ -23,7 +23,7 @@ if needed not in s:
     anchor = "import androidx.compose.foundation.layout.fillMaxWidth"
     if anchor not in s:
         raise SystemExit("DownloadsSheet layout import anchor not found")
-    s = s.replace(anchor, anchor + "\\n" + needed, 1)
+    s = s.replace(anchor, anchor + "\n" + needed, 1)
 downloads.write_text(s, encoding="utf-8")
 
 print("Applied final Compose import fixes for address animation and MD3 download ring.")
