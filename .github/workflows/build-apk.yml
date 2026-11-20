@@ -105,7 +105,7 @@ jobs:
       - name: Apply SwagaBrowser 0.1.1 beta update
         run: |
           set -euo pipefail
-          cat patches/swaga-011-beta-00.txt patches/swaga-011-beta-01.txt patches/swaga-011-beta-02.txt > /tmp/swaga-011-beta.patch.xz.b64
+          cat patches/swaga-011-beta-00a.txt patches/swaga-011-beta-00b.txt patches/swaga-011-beta-01.txt patches/swaga-011-beta-02a.txt patches/swaga-011-beta-02b.txt > /tmp/swaga-011-beta.patch.xz.b64
           test "$(wc -c < /tmp/swaga-011-beta.patch.xz.b64)" -eq 26464
           echo "ccb2297b1a90b7ca26615b6e74368bdec2f2988b1c466c54c402924794751014  /tmp/swaga-011-beta.patch.xz.b64" | sha256sum --check
           base64 --decode /tmp/swaga-011-beta.patch.xz.b64 | xz -dc | patch -p1 -d android-project
