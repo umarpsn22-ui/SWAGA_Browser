@@ -75,6 +75,12 @@ if "Music Player" in s or "Swaga Pleer" in s:
     raise SystemExit("Plugin settings still contain standalone player copy")
 p.write_text(s, encoding="utf-8")
 
+# Keep website media controls, but remove wording tied to the standalone music player.
+p = src / "ui/MediaCenterSheet.kt"
+s = p.read_text(encoding="utf-8")
+s = s.replace("Управление медиа текущей страницы отключено в настройках Music Player. Включи его во вкладке «Настройки плагинов».", "Управление медиа текущей страницы отключено. Включи его во вкладке «Настройки плагинов».")
+p.write_text(s, encoding="utf-8")
+
 # Remove Media3-only dependencies and the media playback foreground service.
 g = gradle.read_text(encoding="utf-8")
 g = re.sub(r'^\s*implementation\("androidx\.media3:media3-(?:exoplayer|session):[^"]+"\)\s*\n', "", g, flags=re.M)
@@ -106,6 +112,8 @@ s = once(
     '        val scoped = applyRoutingScope(raw, context.packageName, wholeDevice)\n        val parsed = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))',
     "import scope validation"
 )
+s = s.replace("findAll(sanitized)", "findAll(scoped)", 1)
+s = s.replace("find(sanitized)", "find(scoped)", 1)
 s = once(s, '        VpnConfigStore.save(context, sanitized, providerId, server, wholeDevice)\n', '        VpnConfigStore.save(context, raw, providerId, server, wholeDevice)\n', "save original profile")
 s = once(
     s,
