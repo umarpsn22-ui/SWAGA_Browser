@@ -23,6 +23,7 @@ on:
       - "patches/companion-method-name-fixes.py"
       - "patches/swaga-011-beta-*.txt"
       - "patches/swaga-011-setter-fix.py"
+      - "patches/swaga-012-enhancement-*.txt"
 
 permissions:
   contents: read
@@ -115,6 +116,14 @@ jobs:
       - name: Resolve legacy preference setter clashes
         run: python3 patches/swaga-011-setter-fix.py android-project
 
+      - name: Upgrade Swaga Pleer, AI, Text Motion and Whole-device VPN
+        run: |
+          set -euo pipefail
+          cat patches/swaga-012-enhancement-00.txt patches/swaga-012-enhancement-01.txt patches/swaga-012-enhancement-02.txt patches/swaga-012-enhancement-03.txt patches/swaga-012-enhancement-04.txt > /tmp/swaga-012.patch.xz.b64
+          test "$(wc -c < /tmp/swaga-012.patch.xz.b64)" -eq 21584
+          echo "e4d45943ff012c8bda44ef5a676dca05b0a756daa48040aa95fa24a44ff44fa4  /tmp/swaga-012.patch.xz.b64" | sha256sum --check
+          base64 --decode /tmp/swaga-012.patch.xz.b64 | xz -dc | patch --batch --forward -p1 -d android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -153,7 +162,7 @@ jobs:
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController Md3DownloadIndicator MusicLibrarySheet SwagaMusicPlayer AiChatStore PluginSettingsSheet LauncherShortcutSheet; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController Md3DownloadIndicator MusicLibrarySheet SwagaMusicPlayer SwagaPlaybackService SwagaMiniPlayerKt AiChatStore PluginSettingsSheet LauncherShortcutSheet; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
           if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
