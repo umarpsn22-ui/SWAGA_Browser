@@ -25,6 +25,7 @@ on:
       - "patches/swaga-011-setter-fix.py"
       - "patches/swaga-012-enhancement-*.txt"
       - "patches/swaga-012-compile-fixes.py"
+      - "patches/swaga-013-remove-music-fix-vpn.py"
 
 permissions:
   contents: read
@@ -125,6 +126,7 @@ jobs:
           echo "e4d45943ff012c8bda44ef5a676dca05b0a756daa48040aa95fa24a44ff44fa4  /tmp/swaga-012.patch.xz.b64" | sha256sum --check
           base64 --decode /tmp/swaga-012.patch.xz.b64 | xz -dc | patch --batch --forward -p1 -d android-project
           python3 patches/swaga-012-compile-fixes.py android-project
+          python3 patches/swaga-013-remove-music-fix-vpn.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
@@ -164,10 +166,11 @@ jobs:
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController Md3DownloadIndicator MusicLibrarySheet SwagaMusicPlayer SwagaPlaybackService SwagaMiniPlayerKt AiChatStore PluginSettingsSheet LauncherShortcutSheet; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
           if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
+          for sym in SwagaMusicPlayer MusicLibrarySheet SwagaPlaybackService SwagaMiniPlayerKt; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Removed music player symbol remains: $sym"; exit 1; fi; done
           grep -aq "0.1.1-beta" /tmp/apk/classes*.dex || true
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
           unzip -l "$APK" | grep -q "libxul.so" && echo "OK   GeckoView engine packaged"
