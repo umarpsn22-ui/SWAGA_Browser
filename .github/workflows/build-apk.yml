@@ -36,6 +36,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_RELEASE_SIGNING: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -172,7 +174,7 @@ jobs:
           gradle-version: "8.11.1"
 
       - name: Prepare persistent release signing key
-        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_SIGNING == 'true'
         env:
           SWAGA_KEYSTORE_BASE64: ${{ secrets.SWAGA_KEYSTORE_BASE64 }}
         run: |
@@ -181,7 +183,7 @@ jobs:
           test -s "$RUNNER_TEMP/swaga-release.jks"
 
       - name: Build signed release APK
-        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_SIGNING == 'true'
         working-directory: android-project
         env:
           SWAGA_KEYSTORE_PATH: ${{ runner.temp }}/swaga-release.jks
@@ -191,7 +193,7 @@ jobs:
         run: gradle --no-daemon assembleRelease
 
       - name: Compile debug APK only (release key not configured)
-        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 == '' }}
+        if: env.HAS_RELEASE_SIGNING != 'true'
         working-directory: android-project
         run: gradle --no-daemon assembleDebug
 
@@ -216,7 +218,7 @@ jobs:
           if grep -aq "LiquidGlassKt" /tmp/apk/classes*.dex; then echo "Legacy glass code still present"; exit 1; fi
 
       - name: Verify persistent release signature
-        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_SIGNING == 'true'
         run: |
           set -euo pipefail
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
@@ -225,7 +227,7 @@ jobs:
           "$APKSIGNER" verify --verbose "$APK"
 
       - name: Upload signed release APK
-        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
+        if: env.HAS_RELEASE_SIGNING == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: SwagaBrowser-release-APK
@@ -234,7 +236,7 @@ jobs:
           retention-days: 14
 
       - name: Upload compile-check APK (not an update package)
-        if: ${{ secrets.SWAGA_KEYSTORE_BASE64 == '' }}
+        if: env.HAS_RELEASE_SIGNING != 'true'
         uses: actions/upload-artifact@v5
         with:
           name: SwagaBrowser-debug-compile-check
