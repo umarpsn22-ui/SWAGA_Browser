@@ -114,15 +114,17 @@ s = once(
         check(mutableState.value !is VpnState.Connected && mutableState.value !is VpnState.Preparing) {
             "Отключи VPN перед изменением области действия."
         }
-        val raw = VpnConfigStore.load(context) ?: error("Сначала импортируй конфигурацию WireGuard.")
-        val scoped = applyRoutingScope(raw, context.packageName, enabled)
-        val parsed = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
-        require(parsed.peers.isNotEmpty()) { "В профиле не найден WireGuard-сервер." }
-        val routes = Regex("(?im)^\\\\s*AllowedIPs\\\\s*=\\\\s*([^\\\\r\\\\n]+)")
-            .findAll(scoped).flatMap { it.groupValues[1].split(',').asSequence() }
-            .map { it.trim() }.toSet()
-        require("0.0.0.0/0" in routes && "::/0" in routes) {
-            "Этот профиль не содержит маршруты всего трафика IPv4 и IPv6 (0.0.0.0/0 и ::/0). Создай full-tunnel конфигурацию у провайдера."
+        val raw = VpnConfigStore.load(context)
+        if (raw != null) {
+            val scoped = applyRoutingScope(raw, context.packageName, enabled)
+            val parsed = Config.parse(ByteArrayInputStream(scoped.toByteArray(Charsets.UTF_8)))
+            require(parsed.peers.isNotEmpty()) { "В профиле не найден WireGuard-сервер." }
+            val routes = Regex("(?im)^\\\\s*AllowedIPs\\\\s*=\\\\s*([^\\\\r\\\\n]+)")
+                .findAll(scoped).flatMap { it.groupValues[1].split(',').asSequence() }
+                .map { it.trim() }.toSet()
+            require("0.0.0.0/0" in routes && "::/0" in routes) {
+                "Этот профиль не содержит маршруты всего трафика IPv4 и IPv6 (0.0.0.0/0 и ::/0). Создай full-tunnel конфигурацию у провайдера."
+            }
         }
         VpnConfigStore.setWholeDevice(context, enabled)
     }
