@@ -173,13 +173,13 @@ jobs:
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
           if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
           for sym in setWholeDevice wholeDevice whole_device; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Whole-device VPN symbol remains: $sym"; exit 1; fi; done
           for sym in SwagaMusicPlayer MusicLibrarySheet SwagaPlaybackService SwagaMiniPlayerKt; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Removed music player symbol remains: $sym"; exit 1; fi; done
-          grep -aq "0.1.1-beta" /tmp/apk/classes*.dex || true
+          grep -aq "0.1.2-beta" /tmp/apk/classes*.dex || true
           unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
           unzip -l "$APK" | grep -q "libxul.so" && echo "OK   GeckoView engine packaged"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libxul.so" && echo "OK   arm64 GeckoView packaged"
