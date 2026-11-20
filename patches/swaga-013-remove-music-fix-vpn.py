@@ -199,10 +199,8 @@ s = s.replace('''                        onClick = { wholeDevice = true },
                             }
                         },
                         enabled = state !is VpnState.Connected && state !is VpnState.Preparing,''')
-s = s.replace('''                if (hasConfig && wholeDevice != storedWholeDevice) {
-                    Text("Режим изменён. Повторно импортируй конфигурацию, чтобы безопасно применить новые маршруты.", color = Color(0xFFE5B35C), fontSize = 11.sp)
-                }
-''', "")
+s = re.sub(r'                if \(hasConfig && wholeDevice != storedWholeDevice\) \{.*?\n                \}\n', "", s, count=1, flags=re.S)
+s = s.replace('enabled = hasConfig && provider == storedProvider && wholeDevice == storedWholeDevice && state !is VpnState.Preparing,', 'enabled = hasConfig && provider == storedProvider && state !is VpnState.Preparing,')
 s = s.replace(
     '"Весь сетевой трафик приложений телефона будет направляться через импортированный WireGuard-туннель. Android отдельно запросит системное разрешение."',
     '"После подключения Android направляет сетевой трафик приложений через WireGuard. Нужен профиль с маршрутами 0.0.0.0/0 и ::/0. Режим применяется сразу, без повторного импорта файла."'
