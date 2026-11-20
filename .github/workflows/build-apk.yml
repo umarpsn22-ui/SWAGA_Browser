@@ -27,6 +27,7 @@ on:
       - "patches/swaga-012-compile-fixes.py"
       - "patches/swaga-013-remove-music-fix-vpn.py"
       - "patches/swaga-014-browser-widgets.py.gz.b64"
+      - "patches/swaga-014-extra-widgets.py"
 
 permissions:
   contents: read
@@ -134,6 +135,7 @@ jobs:
           set -euo pipefail
           base64 --decode patches/swaga-014-browser-widgets.py.gz.b64 | gzip -dc > patches/swaga-014-browser-widgets.py
           python3 patches/swaga-014-browser-widgets.py android-project
+          python3 patches/swaga-014-extra-widgets.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
