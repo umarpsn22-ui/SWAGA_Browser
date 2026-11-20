@@ -24,6 +24,7 @@ on:
       - "patches/swaga-011-beta-*.txt"
       - "patches/swaga-011-setter-fix.py"
       - "patches/swaga-012-enhancement-*.txt"
+      - "patches/swaga-012-compile-fixes.py"
 
 permissions:
   contents: read
@@ -123,6 +124,7 @@ jobs:
           test "$(wc -c < /tmp/swaga-012.patch.xz.b64)" -eq 21584
           echo "e4d45943ff012c8bda44ef5a676dca05b0a756daa48040aa95fa24a44ff44fa4  /tmp/swaga-012.patch.xz.b64" | sha256sum --check
           base64 --decode /tmp/swaga-012.patch.xz.b64 | xz -dc | patch --batch --forward -p1 -d android-project
+          python3 patches/swaga-012-compile-fixes.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
