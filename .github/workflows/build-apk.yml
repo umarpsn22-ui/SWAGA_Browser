@@ -20,6 +20,7 @@ on:
       - "patches/refine-accent-themes.py"
       - "patches/browser-companion.py.gz.b64"
       - "patches/companion-compile-fixes.py"
+      - "patches/companion-method-name-fixes.py"
 
 permissions:
   contents: read
@@ -98,6 +99,7 @@ jobs:
           base64 --decode patches/browser-companion.py.gz.b64 | gzip -dc > patches/browser-companion.py
           python3 patches/browser-companion.py android-project
           python3 patches/companion-compile-fixes.py android-project
+          python3 patches/companion-method-name-fixes.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
