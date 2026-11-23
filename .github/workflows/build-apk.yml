@@ -29,6 +29,7 @@ on:
       - "patches/swaga-014-browser-widgets.py.gz.b64"
       - "patches/swaga-014-extra-widgets.py"
       - "patches/swaga-015-upgrade.py.gz.b64"
+      - "patches/swaga-016-personalization.py.gz.b64"
 
 permissions:
   contents: read
@@ -146,6 +147,12 @@ jobs:
           base64 --decode patches/swaga-015-upgrade.py.gz.b64 | gzip -dc > patches/swaga-015-upgrade.py
           python3 patches/swaga-015-upgrade.py android-project
 
+      - name: Personalize text motion, wallpapers and plug-ins
+        run: |
+          set -euo pipefail
+          base64 --decode patches/swaga-016-personalization.py.gz.b64 | gzip -dc > patches/swaga-016-personalization.py
+          python3 patches/swaga-016-personalization.py android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -204,7 +211,7 @@ jobs:
           APK="$(find android-project/app/build/outputs/apk -name "*.apk" -type f | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaAiSheetKt decodeStartWallpaper setCustomStartWallpaper SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
           if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
