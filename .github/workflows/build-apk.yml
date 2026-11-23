@@ -168,6 +168,7 @@ jobs:
           cp /tmp/swaga-017-assets/oreh.webp android-project/app/src/main/res/drawable-nodpi/swaga_oreh.webp
           cp /tmp/swaga-017-assets/cat.webp android-project/app/src/main/res/drawable-nodpi/swaga_cat_selfie.webp
           cp /tmp/swaga-017-assets/ghost-small.mp4 android-project/app/src/main/res/raw/swaga_ghost.mp4
+          cat patches/swaga-017-script-00.part patches/swaga-017-script-01.part > patches/swaga-017-personal-mascots.py.gz.b64
           base64 --decode patches/swaga-017-personal-mascots.py.gz.b64 | gzip -dc > patches/swaga-017-personal-mascots.py
           base64 --decode patches/swaga-017-supplement.py.gz.b64 | gzip -dc > patches/swaga-017-supplement.py
           python3 patches/swaga-017-personal-mascots.py android-project
