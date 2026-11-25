@@ -37,6 +37,7 @@ if package_dir.exists():
 for source in (root/'app/src/main/java').rglob('*.kt'):
     code = source.read_text()
     code = chr(10).join(line for line in code.splitlines() if 'import app.swaga.browser.widgets.SwagaWidgetUpdater' not in line)
+    code = code.replace('SwagaWidgetUpdater.refresh(getApplication())', '')
     code = re.sub('SwagaWidgetUpdater[.]refresh[(][^)]*[)]', '', code)
     source.write_text(code)
 start_page = root/'app/src/main/java/app/swaga/browser/ui/StartPage.kt'
