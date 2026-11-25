@@ -108,7 +108,7 @@ replacement='''            Spacer(Modifier.height(22.dp))
             links.chunked(4).forEachIndexed { rowIndex, row ->'''
 once(anchor,replacement,'quick links grid')
 # Each tile opens editor on long press; ordinary tap still navigates.
-once('''                        Tile(link.title, Modifier.weight(1f)) { vm.submit(link.url) }''','''                        val linkIndex = rowIndex * 4 + row.indexOf(link)
+once('''                        Tile(link.title, Modifier.weight(1f)) { vm.submit(link.url) }''','''                        val linkIndex = rowIndex * 4 + colIndex
                         Tile(link.title, Modifier.weight(1f), onLongClick = { openLinkEditor(linkIndex) }) { vm.submit(link.url) }''','tile call')
 # Extend Tile API and use long-press gesture.
 once('''private fun Tile(title: String, modifier: Modifier, onClick: () -> Unit) {''','''private fun Tile(title: String, modifier: Modifier, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {''','Tile signature')
