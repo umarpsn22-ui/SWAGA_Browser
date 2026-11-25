@@ -3,20 +3,23 @@ import sys
 root = Path(sys.argv[1])
 manifest = root/'app/src/main/AndroidManifest.xml'
 lines = manifest.read_text().splitlines()
-out = []
-skip = False
+out, block = [], []
+inside = False
 for line in lines:
-    if not skip and '<receiver' in line and '.widgets.' in line:
-        if '</receiver>' not in line:
-            skip = True
-        continue
-    if skip:
-        if '</receiver>' in line:
-            skip = False
-        continue
-    out.append(line)
-if skip:
-    raise SystemExit('Unclosed widget receiver in AndroidManifest.xml')
+    if not inside and '<receiver' in line:
+        inside = True
+        block = [line]
+    elif inside:
+        block.append(line)
+    else:
+        out.append(line)
+    if inside and '</receiver>' in line:
+        chunk = '\n'.join(block)
+        if '.widgets.' not in chunk:
+            out.extend(block)
+        block, inside = [], False
+if inside:
+    raise SystemExit('Unclosed receiver block in AndroidManifest.xml')
 manifest.write_text('\n'.join(out)+'\n')
 widgets = root/'app/src/main/java/app/swaga/browser/widgets/SwagaWidgets.kt'
 if widgets.exists(): widgets.unlink()
