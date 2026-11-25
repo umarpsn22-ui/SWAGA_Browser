@@ -45,7 +45,7 @@ code = start_page.read_text()
 if 'import androidx.compose.foundation.ExperimentalFoundationApi' not in code:
     code = code.replace('import androidx.compose.foundation.combinedClickable', 'import androidx.compose.foundation.combinedClickable'+chr(10)+'import androidx.compose.foundation.ExperimentalFoundationApi')
 code = code.replace('@OptIn(ExperimentalFoundationApi::class)', '@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)')
-code = code.replace('@Composable'+chr(10)+'private fun Tile(', '@OptIn(ExperimentalFoundationApi::class)'+chr(10)+'@Composable'+chr(10)+'private fun Tile(')
+code = code.replace('@Composable'+chr(10)+'private fun Tile(', '@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)'+chr(10)+'@Composable'+chr(10)+'private fun Tile(')
 start_page.write_text(code)
 assert 'APPWIDGET_UPDATE' not in manifest.read_text(), 'Widget receiver remains in manifest'
 assert not widgets.exists(), 'Widget provider source remains'
