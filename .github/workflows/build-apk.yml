@@ -36,6 +36,7 @@ on:
       - "patches/remove-home-widgets.py"
       - "patches/editable-start-links.py"
       - "patches/ai-markdown-renderer.py"
+      - "patches/transparent-hero-video.py"
 
 permissions:
   contents: read
@@ -186,6 +187,11 @@ jobs:
       - name: Repair Swaga AI Markdown rendering
         run: python3 patches/ai-markdown-renderer.py android-project
 
+      - name: Remove baked-in background from hero animation
+        run: |
+          python3 -m pip install --quiet --user Pillow
+          python3 patches/transparent-hero-video.py android-project
+
       # Publish the actual optimized source used by this build. Widget-free and quick-link editor compile check, corrected opt-in.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -252,7 +258,7 @@ jobs:
           for sym in setWholeDevice wholeDevice whole_device; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Whole-device VPN symbol remains: $sym"; exit 1; fi; done
           for sym in SwagaMusicPlayer MusicLibrarySheet SwagaPlaybackService SwagaMiniPlayerKt; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Removed music player symbol remains: $sym"; exit 1; fi; done
           grep -aq "requestWithRetry" /tmp/apk/classes*.dex
-          unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
+          unzip -l "$APK" | grep -q "swaga_hero_alpha.webp" && echo "OK   transparent animated hero packaged"
           unzip -l "$APK" | grep -q "swaga_oreh" && echo "OK   transparent Oreh mascot packaged"
           unzip -l "$APK" | grep -q "swaga_cat_selfie" && echo "OK   cat entry image packaged"
           unzip -l "$APK" | grep -q "swaga_ghost" && echo "OK   Ghost reaction video packaged"
