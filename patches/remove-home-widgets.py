@@ -1,10 +1,23 @@
 from pathlib import Path
-import re, sys
+import sys
 root = Path(sys.argv[1])
 manifest = root/'app/src/main/AndroidManifest.xml'
-text = manifest.read_text()
-text = re.sub(r'\\s*<receiver\\s+android:name="\\.widgets\\.[^"]+".*?</receiver>', '', text, flags=re.S)
-manifest.write_text(text)
+lines = manifest.read_text().splitlines()
+out = []
+skip = False
+for line in lines:
+    if not skip and '<receiver' in line and '.widgets.' in line:
+        if '</receiver>' not in line:
+            skip = True
+        continue
+    if skip:
+        if '</receiver>' in line:
+            skip = False
+        continue
+    out.append(line)
+if skip:
+    raise SystemExit('Unclosed widget receiver in AndroidManifest.xml')
+manifest.write_text('\n'.join(out)+'\n')
 widgets = root/'app/src/main/java/app/swaga/browser/widgets/SwagaWidgets.kt'
 if widgets.exists(): widgets.unlink()
 for folder in ('layout', 'xml', 'drawable'):
