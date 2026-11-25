@@ -35,6 +35,7 @@ on:
       - "patches/swaga-017-assets-*.part"
       - "patches/remove-home-widgets.py"
       - "patches/editable-start-links.py"
+      - "patches/ai-markdown-renderer.py"
 
 permissions:
   contents: read
@@ -181,6 +182,9 @@ jobs:
 
       - name: Add editable persistent start-page shortcuts
         run: python3 patches/editable-start-links.py android-project
+
+      - name: Repair Swaga AI Markdown rendering
+        run: python3 patches/ai-markdown-renderer.py android-project
 
       # Publish the actual optimized source used by this build. Widget-free and quick-link editor compile check, corrected opt-in.
       - name: Upload source snapshot
