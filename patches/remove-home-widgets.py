@@ -1,5 +1,5 @@
 from pathlib import Path
-import sys
+import sys\nimport re
 root = Path(sys.argv[1])
 manifest = root/'app/src/main/AndroidManifest.xml'
 lines = manifest.read_text().splitlines()
@@ -35,6 +35,21 @@ package_dir = root/'app/src/main/java/app/swaga/browser/widgets'
 if package_dir.exists():
     try: package_dir.rmdir()
     except OSError: pass
+# Remove the updater calls left behind in browser services and lifecycle hooks.
+for source in (root/'app/src/main/java').rglob('*.kt'):
+    code = source.read_text()
+    code = code.replace('import app.swaga.browser.widgets.SwagaWidgetUpdater\\n', '')
+    code = re.sub(r'SwagaWidgetUpdater\\.refresh\\([^)]*\\)', '', code)
+    source.write_text(code)
+
+# combinedClickable is still experimental in the Compose version used by this project.
+start_page = root/'app/src/main/java/app/swaga/browser/ui/StartPage.kt'
+code = start_page.read_text()
+if 'import androidx.compose.foundation.ExperimentalFoundationApi' not in code:
+    code = code.replace('import androidx.compose.foundation.combinedClickable',
+                        'import androidx.compose.foundation.combinedClickable\\nimport androidx.compose.foundation.ExperimentalFoundationApi')
+code = code.replace('@Composable\\nprivate fun Tile(', '@OptIn(ExperimentalFoundationApi::class)\\n@Composable\\nprivate fun Tile(')
+start_page.write_text(code)
 assert 'APPWIDGET_UPDATE' not in manifest.read_text(), 'Widget receiver remains in manifest'
 assert not widgets.exists(), 'Widget provider source remains'
 print('Home-screen widgets removed from manifest, Kotlin source and resources.')
