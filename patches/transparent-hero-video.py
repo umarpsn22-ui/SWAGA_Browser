@@ -83,3 +83,60 @@ with tempfile.TemporaryDirectory(prefix='swaga-hero-') as temp:
         if alpha.getpixel((0, 0)) != 0:
             raise SystemExit('Hero background was not made transparent.')
 print('Created transparent animated WebP mascot from the original hero video.')
+
+# Switch the Android view from the opaque MP4 to the alpha WebP animation.
+start_page = root/'app/src/main/java/app/swaga/browser/ui/StartPage.kt'
+code = start_page.read_text()
+new_imports = [
+    'import android.graphics.ImageDecoder',
+    'import android.graphics.drawable.AnimatedImageDrawable',
+    'import android.graphics.drawable.BitmapDrawable',
+    'import android.graphics.drawable.Drawable',
+    'import android.os.Build',
+    'import android.widget.ImageView',
+]
+for item in new_imports:
+    if item not in code:
+        code = code.replace('import android.graphics.BitmapFactory', 'import android.graphics.BitmapFactory\n'+item, 1)
+start_marker = '@Composable\nprivate fun SwagaHeroVideo()'
+end_marker = '\n@Composable\nprivate fun StartAction'
+start = code.index(start_marker)
+end = code.index(end_marker, start)
+replacement = '''@Suppress("NewApi")
+@Composable
+private fun SwagaHeroVideo() {
+    val context = LocalContext.current
+    val hero: Drawable = remember(context) {
+        val animated = if (Build.VERSION.SDK_INT >= 28) runCatching {
+            ImageDecoder.decodeDrawable(ImageDecoder.createSource(context.resources, R.raw.swaga_hero_alpha))
+        }.getOrNull() as? AnimatedImageDrawable else null
+        animated?.apply { repeatCount = AnimatedImageDrawable.REPEAT_INFINITE }
+            ?: BitmapDrawable(
+                context.resources,
+                BitmapFactory.decodeResource(context.resources, R.raw.swaga_hero_alpha)
+                    ?: throw IllegalStateException("Transparent hero image is missing")
+            )
+    }
+    DisposableEffect(hero) {
+        (hero as? AnimatedImageDrawable)?.start()
+        onDispose { (hero as? AnimatedImageDrawable)?.stop() }
+    }
+    AndroidView(
+        factory = { viewContext ->
+            ImageView(viewContext).apply {
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                background = null
+                setImageDrawable(hero)
+                contentDescription = "Анимированный логотип Swaga"
+            }
+        },
+        update = { view ->
+            if (view.drawable !== hero) view.setImageDrawable(hero)
+            (hero as? AnimatedImageDrawable)?.let { if (!it.isRunning) it.start() }
+        },
+        modifier = Modifier.size(112.dp),
+    )
+}
+'''
+code = code[:start] + replacement + code[end:]
+start_page.write_text(code)
