@@ -14,8 +14,29 @@ on:
       - "patches/swaga-vpn-foundation.py"
       - "patches/wireguard-vpn.py"
       - "patches/vpn-src/**"
+      - "patches/swaga-premium-payload-*.txt"
+      - "patches/swaga-premium-ux.py"
       - "patches/oled-dark-theme.py"
       - "patches/refine-accent-themes.py"
+      - "patches/browser-companion.py.gz.b64"
+      - "patches/companion-compile-fixes.py"
+      - "patches/companion-method-name-fixes.py"
+      - "patches/swaga-011-beta-*.txt"
+      - "patches/swaga-011-setter-fix.py"
+      - "patches/swaga-012-enhancement-*.txt"
+      - "patches/swaga-012-compile-fixes.py"
+      - "patches/swaga-013-remove-music-fix-vpn.py"
+      - "patches/swaga-014-browser-widgets.py.gz.b64"
+      - "patches/swaga-014-extra-widgets.py"
+      - "patches/swaga-015-upgrade.py.gz.b64"
+      - "patches/swaga-016-personalization.py.gz.b64"
+      - "patches/swaga-017-personal-mascots.py.gz.b64"
+      - "patches/swaga-017-supplement.py.gz.b64"
+      - "patches/swaga-017-assets-*.part"
+      - "patches/remove-home-widgets.py"
+      - "patches/editable-start-links.py"
+      - "patches/ai-markdown-renderer.py"
+      - "patches/transparent-hero-video.py"
 
 permissions:
   contents: read
@@ -23,6 +44,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_RELEASE_SIGNING: ${{ secrets.SWAGA_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -67,7 +90,111 @@ jobs:
       - name: Integrate real WireGuard tunnel and VPN controls
         run: python3 patches/wireguard-vpn.py android-project
 
-      # Publish the actual optimized source used by this build.
+      - name: Add Swaga VPN Control Center and Swaga_AI
+        run: |
+          set -euo pipefail
+          cat patches/swaga-premium-payload-00a.txt \
+              patches/swaga-premium-payload-00b.txt \
+              patches/swaga-premium-payload-00c.txt \
+              patches/swaga-premium-payload-01.txt \
+              patches/swaga-premium-payload-02.txt \
+              patches/swaga-premium-payload-03.txt \
+              patches/swaga-premium-payload-04.txt \
+              patches/swaga-premium-payload-05.txt \
+              patches/swaga-premium-payload-06.txt \
+              patches/swaga-premium-payload-07.txt \
+              patches/swaga-premium-payload-08.txt \
+              patches/swaga-premium-payload-09.txt \
+              > patches/swaga-premium-src.tar.xz.b64
+          test "$(wc -c < patches/swaga-premium-src.tar.xz.b64)" -eq 28512
+          echo "fc5e60e979c3f97f254747540c74e25f303c3a039845722cfe430c787191214f  patches/swaga-premium-src.tar.xz.b64" | sha256sum --check
+          base64 --decode patches/swaga-premium-src.tar.xz.b64 | tar -xJf - -C patches
+          python3 patches/swaga-premium-ux.py android-project
+
+      - name: Build SwagaBrowser 0.1.1 beta plugins, Music and AI history
+        run: |
+          set -euo pipefail
+          base64 --decode patches/browser-companion.py.gz.b64 | gzip -dc > patches/browser-companion.py
+          python3 patches/browser-companion.py android-project
+          python3 patches/companion-compile-fixes.py android-project
+          python3 patches/companion-method-name-fixes.py android-project
+
+      - name: Apply SwagaBrowser 0.1.1 beta update
+        run: |
+          set -euo pipefail
+          cat patches/swaga-011-beta-00a.txt patches/swaga-011-beta-00b.txt patches/swaga-011-beta-01.txt patches/swaga-011-beta-02a.txt patches/swaga-011-beta-02b.txt > /tmp/swaga-011-beta.patch.xz.b64
+          test "$(wc -c < /tmp/swaga-011-beta.patch.xz.b64)" -eq 26464
+          echo "ccb2297b1a90b7ca26615b6e74368bdec2f2988b1c466c54c402924794751014  /tmp/swaga-011-beta.patch.xz.b64" | sha256sum --check
+          base64 --decode /tmp/swaga-011-beta.patch.xz.b64 | xz -dc | patch -p1 -d android-project
+          rm -f android-project/app/src/main/java/app/swaga/browser/ui/SwagaCompanionUi.kt
+
+      - name: Resolve legacy preference setter clashes
+        run: python3 patches/swaga-011-setter-fix.py android-project
+
+      - name: Upgrade Swaga AI, Text Motion and browser-only VPN
+        run: |
+          set -euo pipefail
+          cat patches/swaga-012-enhancement-00.txt patches/swaga-012-enhancement-01.txt patches/swaga-012-enhancement-02.txt patches/swaga-012-enhancement-03.txt patches/swaga-012-enhancement-04.txt > /tmp/swaga-012.patch.xz.b64
+          test "$(wc -c < /tmp/swaga-012.patch.xz.b64)" -eq 21584
+          echo "e4d45943ff012c8bda44ef5a676dca05b0a756daa48040aa95fa24a44ff44fa4  /tmp/swaga-012.patch.xz.b64" | sha256sum --check
+          base64 --decode /tmp/swaga-012.patch.xz.b64 | xz -dc | patch --batch --forward -p1 -d android-project
+          python3 patches/swaga-012-compile-fixes.py android-project
+          python3 patches/swaga-013-remove-music-fix-vpn.py android-project
+
+      - name: Add native Swaga home-screen widgets and remove whole-device VPN
+        run: |
+          set -euo pipefail
+          base64 --decode patches/swaga-014-browser-widgets.py.gz.b64 | gzip -dc > patches/swaga-014-browser-widgets.py
+          python3 patches/swaga-014-browser-widgets.py android-project
+          python3 patches/swaga-014-extra-widgets.py android-project
+
+      - name: Upgrade Swaga AI, text animation and premium widgets
+        run: |
+          set -euo pipefail
+          base64 --decode patches/swaga-015-upgrade.py.gz.b64 | gzip -dc > patches/swaga-015-upgrade.py
+          python3 patches/swaga-015-upgrade.py android-project
+
+      - name: Personalize text motion, wallpapers and plug-ins
+        run: |
+          set -euo pipefail
+          base64 --decode patches/swaga-016-personalization.py.gz.b64 | gzip -dc > patches/swaga-016-personalization.py
+          python3 patches/swaga-016-personalization.py android-project
+
+      - name: Add Swaga mascots, Ghost reaction and live wallpaper editor
+        run: |
+          set -euo pipefail
+          cat patches/swaga-017-assets-00.part patches/swaga-017-assets-01.part patches/swaga-017-assets-02.part patches/swaga-017-assets-02b.part patches/swaga-017-assets-02c.part patches/swaga-017-assets-03.part patches/swaga-017-assets-04.part patches/swaga-017-assets-05.part patches/swaga-017-assets-06.part patches/swaga-017-assets-07.part > /tmp/swaga-017-assets.zip.b64
+          base64 --decode /tmp/swaga-017-assets.zip.b64 > /tmp/swaga-017-assets.zip
+          echo "51d9714cf7d802bf5f096887a0ed279100d59bf92201ee9c6798f943025b1dfa  /tmp/swaga-017-assets.zip" | sha256sum --check
+          mkdir -p /tmp/swaga-017-assets
+          unzip -oq /tmp/swaga-017-assets.zip -d /tmp/swaga-017-assets
+          mkdir -p android-project/app/src/main/res/drawable-nodpi android-project/app/src/main/res/raw
+          cp /tmp/swaga-017-assets/oreh.webp android-project/app/src/main/res/drawable-nodpi/swaga_oreh.webp
+          cp /tmp/swaga-017-assets/cat.webp android-project/app/src/main/res/drawable-nodpi/swaga_cat_selfie.webp
+          cp /tmp/swaga-017-assets/ghost-small.mp4 android-project/app/src/main/res/raw/swaga_ghost.mp4
+          cat patches/swaga-017-script-00.part patches/swaga-017-script-01.part > patches/swaga-017-personal-mascots.py.gz.b64
+          base64 --decode patches/swaga-017-personal-mascots.py.gz.b64 | gzip -dc > patches/swaga-017-personal-mascots.py
+          base64 --decode patches/swaga-017-supplement.py.gz.b64 | gzip -dc > patches/swaga-017-supplement.py
+          python3 patches/swaga-017-personal-mascots.py android-project
+          python3 patches/swaga-017-supplement.py android-project
+
+      - name: Remove all Android home-screen widgets
+        run: python3 patches/remove-home-widgets.py android-project
+
+      - name: Add editable persistent start-page shortcuts
+        run: python3 patches/editable-start-links.py android-project
+
+      - name: Repair Swaga AI Markdown rendering
+        run: python3 patches/ai-markdown-renderer.py android-project
+
+      - name: Remove baked-in background from hero animation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python3 -m pip install --quiet --user Pillow
+          python3 patches/transparent-hero-video.py android-project
+
+      # Publish the actual optimized source used by this build. Widget-free and quick-link editor compile check, corrected opt-in.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
         with:
@@ -94,27 +221,56 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build release APK
+      - name: Prepare persistent release signing key
+        if: env.HAS_RELEASE_SIGNING == 'true'
+        env:
+          SWAGA_KEYSTORE_BASE64: ${{ secrets.SWAGA_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$SWAGA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/swaga-release.jks"
+          test -s "$RUNNER_TEMP/swaga-release.jks"
+
+      - name: Build signed release APK
+        if: env.HAS_RELEASE_SIGNING == 'true'
         working-directory: android-project
+        env:
+          SWAGA_KEYSTORE_PATH: ${{ runner.temp }}/swaga-release.jks
+          SWAGA_KEYSTORE_PASSWORD: ${{ secrets.SWAGA_KEYSTORE_PASSWORD }}
+          SWAGA_KEY_ALIAS: ${{ secrets.SWAGA_KEY_ALIAS }}
+          SWAGA_KEY_PASSWORD: ${{ secrets.SWAGA_KEY_PASSWORD }}
         run: gradle --no-daemon assembleRelease
+
+      - name: Compile debug APK only (release key not configured)
+        if: env.HAS_RELEASE_SIGNING != 'true'
+        working-directory: android-project
+        run: gradle --no-daemon assembleDebug
 
       # Proves the new code really ended up in the APK (not only in the sources).
       - name: Verify APK contents
         run: |
           set -euo pipefail
-          APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
+          APK="$(find android-project/app/build/outputs/apk -name "*.apk" -type f | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaAiSheetKt decodeStartWallpaper setCustomStartWallpaper OrehMascot GhostReactionVideo CatEntryOverlay WallpaperCropDialog; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
-          unzip -l "$APK" | grep -q "swaga_hero" && echo "OK   hero video packaged"
+          for sym in SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Home-screen widget remains: $sym"; exit 1; fi; done
+          if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
+          for sym in setWholeDevice wholeDevice whole_device; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Whole-device VPN symbol remains: $sym"; exit 1; fi; done
+          for sym in SwagaMusicPlayer MusicLibrarySheet SwagaPlaybackService SwagaMiniPlayerKt; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Removed music player symbol remains: $sym"; exit 1; fi; done
+          grep -aq "requestWithRetry" /tmp/apk/classes*.dex
+          unzip -l "$APK" | grep -q "swaga_hero_alpha.webp" && echo "OK   transparent animated hero packaged"
+          unzip -l "$APK" | grep -q "swaga_oreh" && echo "OK   transparent Oreh mascot packaged"
+          unzip -l "$APK" | grep -q "swaga_cat_selfie" && echo "OK   cat entry image packaged"
+          unzip -l "$APK" | grep -q "swaga_ghost" && echo "OK   Ghost reaction video packaged"
           unzip -l "$APK" | grep -q "libxul.so" && echo "OK   GeckoView engine packaged"
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libxul.so" && echo "OK   arm64 GeckoView packaged"
           if unzip -l "$APK" | grep -Eq "lib/(x86|x86_64|armeabi-v7a)/"; then echo "Unexpected non-arm64 ABI payload"; exit 1; fi
           if grep -aq "LiquidGlassKt" /tmp/apk/classes*.dex; then echo "Legacy glass code still present"; exit 1; fi
 
-      - name: Verify release signature
+      - name: Verify persistent release signature
+        if: env.HAS_RELEASE_SIGNING == 'true'
         run: |
           set -euo pipefail
           APK="$(ls android-project/app/build/outputs/apk/release/*.apk | head -n1)"
@@ -122,11 +278,20 @@ jobs:
           test -x "$APKSIGNER"
           "$APKSIGNER" verify --verbose "$APK"
 
-      - name: Upload APK
+      - name: Upload signed release APK
+        if: env.HAS_RELEASE_SIGNING == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: SwagaBrowser-release-APK
           path: android-project/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
-          
+
+      - name: Upload compile-check APK (not an update package)
+        if: env.HAS_RELEASE_SIGNING != 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: SwagaBrowser-debug-compile-check
+          path: android-project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 3
