@@ -37,6 +37,7 @@ on:
       - "patches/editable-start-links.py"
       - "patches/ai-markdown-renderer.py"
       - "patches/transparent-hero-video.py"
+      - "patches/minimal-chrome-start-page.py"
 
 permissions:
   contents: read
@@ -193,6 +194,9 @@ jobs:
           sudo apt-get install -y ffmpeg
           python3 -m pip install --quiet --user Pillow
           python3 patches/transparent-hero-video.py android-project
+
+      - name: Simplify the new-tab page
+        run: python3 patches/minimal-chrome-start-page.py android-project
 
       # Publish the actual optimized source used by this build. Widget-free and quick-link editor compile check, corrected opt-in.
       - name: Upload source snapshot
