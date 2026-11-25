@@ -33,6 +33,7 @@ on:
       - "patches/swaga-017-personal-mascots.py.gz.b64"
       - "patches/swaga-017-supplement.py.gz.b64"
       - "patches/swaga-017-assets-*.part"
+      - "patches/remove-home-widgets.py"
 
 permissions:
   contents: read
@@ -174,6 +175,9 @@ jobs:
           python3 patches/swaga-017-personal-mascots.py android-project
           python3 patches/swaga-017-supplement.py android-project
 
+      - name: Remove all Android home-screen widgets
+        run: python3 patches/remove-home-widgets.py android-project
+
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
         uses: actions/upload-artifact@v5
@@ -232,9 +236,10 @@ jobs:
           APK="$(find android-project/app/build/outputs/apk -name "*.apk" -type f | head -n1)"
           echo "APK: $APK ($(du -h "$APK" | cut -f1))"
           rm -rf /tmp/apk && mkdir /tmp/apk && unzip -oq "$APK" 'classes*.dex' -d /tmp/apk
-          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaAiSheetKt decodeStartWallpaper setCustomStartWallpaper SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget OrehMascot GhostReactionVideo CatEntryOverlay WallpaperCropDialog; do
+          for sym in AppOverlaysKt AppSheet AppDialog appButton enforceSessionBudget restoreOrLoad "Swaga AI" "Swaga VPN" BrowserMediaController MediaCenterSheet Md3DownloadIndicator AiChatStore PluginSettingsSheet LauncherShortcutSheet SwagaAiSheetKt decodeStartWallpaper setCustomStartWallpaper OrehMascot GhostReactionVideo CatEntryOverlay WallpaperCropDialog; do
             if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "OK   dex contains $sym"; else echo "MISSING $sym"; exit 1; fi
           done
+          for sym in SwagaSearchWidget SwagaLinksWidget SwagaPrivacyWidget SwagaDownloadsWidget SwagaAiWidget SwagaRecentTabsWidget; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Home-screen widget remains: $sym"; exit 1; fi; done
           if grep -aq "SwagaCompanionSheet" /tmp/apk/classes*.dex; then echo "Streak mascot code still present"; exit 1; fi
           for sym in setWholeDevice wholeDevice whole_device; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Whole-device VPN symbol remains: $sym"; exit 1; fi; done
           for sym in SwagaMusicPlayer MusicLibrarySheet SwagaPlaybackService SwagaMiniPlayerKt; do if grep -aq "$sym" /tmp/apk/classes*.dex; then echo "Removed music player symbol remains: $sym"; exit 1; fi; done
