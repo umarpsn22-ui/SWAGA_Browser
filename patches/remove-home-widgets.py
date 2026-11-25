@@ -1,5 +1,6 @@
 from pathlib import Path
-import sys\nimport re
+import sys
+import re
 root = Path(sys.argv[1])
 manifest = root/'app/src/main/AndroidManifest.xml'
 lines = manifest.read_text().splitlines()
@@ -14,13 +15,11 @@ for line in lines:
     else:
         out.append(line)
     if inside and '</receiver>' in line:
-        chunk = '\n'.join(block)
-        if '.widgets.' not in chunk:
-            out.extend(block)
+        chunk = chr(10).join(block)
+        if '.widgets.' not in chunk: out.extend(block)
         block, inside = [], False
-if inside:
-    raise SystemExit('Unclosed receiver block in AndroidManifest.xml')
-manifest.write_text('\n'.join(out)+'\n')
+if inside: raise SystemExit('Unclosed receiver block in AndroidManifest.xml')
+manifest.write_text(chr(10).join(out)+chr(10))
 widgets = root/'app/src/main/java/app/swaga/browser/widgets/SwagaWidgets.kt'
 if widgets.exists(): widgets.unlink()
 for folder in ('layout', 'xml', 'drawable'):
@@ -35,21 +34,18 @@ package_dir = root/'app/src/main/java/app/swaga/browser/widgets'
 if package_dir.exists():
     try: package_dir.rmdir()
     except OSError: pass
-# Remove the updater calls left behind in browser services and lifecycle hooks.
 for source in (root/'app/src/main/java').rglob('*.kt'):
     code = source.read_text()
-    code = code.replace('import app.swaga.browser.widgets.SwagaWidgetUpdater\\n', '')
-    code = re.sub(r'SwagaWidgetUpdater\\.refresh\\([^)]*\\)', '', code)
+    code = chr(10).join(line for line in code.splitlines() if 'import app.swaga.browser.widgets.SwagaWidgetUpdater' not in line)
+    code = re.sub('SwagaWidgetUpdater[.]refresh[(][^)]*[)]', '', code)
     source.write_text(code)
-
-# combinedClickable is still experimental in the Compose version used by this project.
 start_page = root/'app/src/main/java/app/swaga/browser/ui/StartPage.kt'
 code = start_page.read_text()
 if 'import androidx.compose.foundation.ExperimentalFoundationApi' not in code:
-    code = code.replace('import androidx.compose.foundation.combinedClickable',
-                        'import androidx.compose.foundation.combinedClickable\\nimport androidx.compose.foundation.ExperimentalFoundationApi')
-code = code.replace('@Composable\\nprivate fun Tile(', '@OptIn(ExperimentalFoundationApi::class)\\n@Composable\\nprivate fun Tile(')
+    code = code.replace('import androidx.compose.foundation.combinedClickable', 'import androidx.compose.foundation.combinedClickable'+chr(10)+'import androidx.compose.foundation.ExperimentalFoundationApi')
+code = code.replace('@Composable'+chr(10)+'private fun Tile(', '@OptIn(ExperimentalFoundationApi::class)'+chr(10)+'@Composable'+chr(10)+'private fun Tile(')
 start_page.write_text(code)
 assert 'APPWIDGET_UPDATE' not in manifest.read_text(), 'Widget receiver remains in manifest'
 assert not widgets.exists(), 'Widget provider source remains'
-print('Home-screen widgets removed from manifest, Kotlin source and resources.')
+assert 'SwagaWidgetUpdater' not in ''.join(p.read_text() for p in (root/'app/src/main/java').rglob('*.kt')), 'Widget updater reference remains'
+print('Home-screen widgets and all updater references removed.')
