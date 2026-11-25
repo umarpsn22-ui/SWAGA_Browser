@@ -34,6 +34,7 @@ on:
       - "patches/swaga-017-supplement.py.gz.b64"
       - "patches/swaga-017-assets-*.part"
       - "patches/remove-home-widgets.py"
+      - "patches/editable-start-links.py"
 
 permissions:
   contents: read
@@ -177,6 +178,9 @@ jobs:
 
       - name: Remove all Android home-screen widgets
         run: python3 patches/remove-home-widgets.py android-project
+
+      - name: Add editable persistent start-page shortcuts
+        run: python3 patches/editable-start-links.py android-project
 
       # Publish the actual optimized source used by this build.
       - name: Upload source snapshot
