@@ -39,6 +39,7 @@ on:
       - "patches/transparent-hero-video.py"
       - "patches/minimal-chrome-start-page.py"
       - "patches/fix-bottom-bar-new-tab.py"
+      - "patches/chrome-start-actions.py"
 
 permissions:
   contents: read
@@ -198,6 +199,9 @@ jobs:
 
       - name: Simplify the new-tab page
         run: python3 patches/minimal-chrome-start-page.py android-project
+
+      - name: Add AI Mode and Incognito shortcuts to new-tab page
+        run: python3 patches/chrome-start-actions.py android-project
 
       - name: Keep New Tab and tab switcher visible in bottom bar
         run: python3 patches/fix-bottom-bar-new-tab.py android-project
